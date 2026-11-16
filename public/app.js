@@ -5,10 +5,7 @@
  * Autor: Nicolae Lopes - Matrícula: 2024014650
  * ----------------------------------------------------------------------------
  * Módulo: Camada de Apresentação Front-end (public/app.js - Vanilla JS)
- * Tarefas Relacionadas:
- *   - T06: Tela de consulta da lista de produtos
- *   - T10: Exibição de lotes por validade mais próxima (FEFO - RN-III)
- *   - T12 & T15: Avisos separados de estoque baixo e vencimento próximo no login e na saída (RNF04)
+ * Padrão de Design: "Gestão Online" (vendas_1.jpg)
  * ============================================================================
  */
 
@@ -21,7 +18,7 @@ let estadoApp = {
 };
 
 /**
- * Função auxiliar para requisições HTTP autenticadas à API Express.
+ * Requisição HTTP autenticada à API Express.
  */
 async function apiFetch(url, options = {}) {
   const headers = {
@@ -45,7 +42,7 @@ async function apiFetch(url, options = {}) {
 }
 
 /**
- * Exibe mensagem de feedback visual clara no topo da tela (RNF04).
+ * Exibe notificação (toast) de feedback no topo.
  */
 function exibirToast(mensagem, tipo = 'success') {
   const toast = document.getElementById('global-toast');
@@ -58,21 +55,50 @@ function exibirToast(mensagem, tipo = 'success') {
   }, 7000);
 }
 
-/**
- * Preenche rapidamente o formulário de login para demonstração.
- */
 function preencherLogin(login, senha) {
   document.getElementById('login-input').value = login;
   document.getElementById('senha-input').value = senha;
 }
 
 /**
- * Alterna entre as abas da interface principal.
+ * Recolhe/expande a barra lateral azul ao clicar no botão ☰.
+ */
+function alternarSidebar() {
+  document.getElementById('erp-sidebar').classList.toggle('collapsed');
+}
+
+/**
+ * Filtra os itens do menu lateral ("Procurar opção do menu..." igual ao vendas_1.jpg).
+ */
+function filtrarMenuSidebar(termo) {
+  const busca = String(termo || '').trim().toLowerCase();
+  const isAdmin = estadoApp.usuario?.perfil === 'Administrador';
+
+  document.querySelectorAll('.sidebar-link').forEach((btn) => {
+    if (btn.classList.contains('admin-only') && !isAdmin) {
+      btn.classList.add('hidden');
+      return;
+    }
+    const texto = btn.innerText.toLowerCase();
+    btn.classList.toggle('hidden', busca !== '' && !texto.includes(busca));
+  });
+}
+
+/**
+ * Alterna entre as seções do menu lateral.
  */
 function irParaAba(tabId) {
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  let tituloPagina = 'Painel';
+  document.querySelectorAll('.sidebar-link').forEach((btn) => {
+    const ativo = btn.dataset.tab === tabId;
+    btn.classList.toggle('active', ativo);
+    if (ativo && btn.dataset.title) {
+      tituloPagina = btn.dataset.title;
+    }
   });
+
+  document.getElementById('topbar-page-title').textContent = tituloPagina;
+
   document.querySelectorAll('.tab-panel').forEach((panel) => {
     panel.classList.toggle('active', panel.id === tabId);
   });
@@ -86,7 +112,7 @@ function irParaAba(tabId) {
 }
 
 /**
- * Configura a visibilidade dos elementos de acordo com o perfil logado (RF01 / RNF02 / CT01).
+ * Configura permissões visuais conforme o perfil logado (Administrador vs Funcionario).
  */
 function aplicarPermissoesDePerfil() {
   const isAdmin = estadoApp.usuario && estadoApp.usuario.perfil === 'Administrador';
@@ -106,7 +132,7 @@ function aplicarPermissoesDePerfil() {
 }
 
 /**
- * Carrega produtos, alertas e movimentações simultaneamente.
+ * Carrega todos os dados do painel.
  */
 async function carregarTudo() {
   try {
@@ -120,7 +146,7 @@ async function carregarTudo() {
     estadoApp.alertas = alertas;
     estadoApp.movimentacoes = movs;
 
-    renderizarDashboardAlertas();
+    renderizarDashboardGestaoOnline();
     renderizarTabelaProdutos();
     popularSelectsDeProdutos();
     renderizarTabelaMovimentacoes();
@@ -134,19 +160,87 @@ async function carregarTudo() {
 }
 
 /**
- * Renderiza o Painel Inicial com os 2 quadros de alertas separados (RF07, RNF04, RN-II, RN-III).
+ * Renderiza o Painel Principal seguindo exatamente o design de vendas_1.jpg:
+ *   1. Os 4 cards coloridos (Ciano, Laranja, Verde, Vermelho)
+ *   2. A mini tabela de últimas movimentações à esquerda (com badges VENDA/SAÍDA, ENTRADA, PERDA)
+ *   3. O gráfico de barras 3D azul-claro no centro (Estoque Disponível por Categoria)
+ *   4. Os 2 painéis inferiores com abas flutuantes para os Alertas Separados (RF07 / RNF04)
  */
-function renderizarDashboardAlertas() {
+function renderizarDashboardGestaoOnline() {
   const { estoqueBaixo, validadeProximaOuVencida } = estadoApp.alertas;
+  const totalAlertas = estoqueBaixo.length + validadeProximaOuVencida.length;
 
+  // 1. Valores dos 4 Cards Coloridos e Sino de Notificações
   document.getElementById('kpi-total-produtos').textContent = estadoApp.produtos.length;
   document.getElementById('kpi-estoque-baixo').textContent = estoqueBaixo.length;
   document.getElementById('kpi-validade').textContent = validadeProximaOuVencida.length;
   document.getElementById('kpi-movimentacoes').textContent = estadoApp.movimentacoes.length;
+  document.getElementById('bell-count').textContent = totalAlertas;
 
   document.getElementById('badge-count-estoque').textContent = estoqueBaixo.length;
   document.getElementById('badge-count-validade').textContent = validadeProximaOuVencida.length;
 
+  // 2. Mini Tabela Esquerda (Últimas Movimentações estilo Cliente | Total | Badge)
+  const miniBody = document.getElementById('mini-movimentacoes-body');
+  const ultimas5 = estadoApp.movimentacoes.slice(0, 5);
+  if (ultimas5.length === 0) {
+    miniBody.innerHTML = '<tr><td colspan="3" class="muted">Sem movimentações recentes.</td></tr>';
+  } else {
+    miniBody.innerHTML = ultimas5
+      .map((m) => {
+        const pillClass =
+          m.tipo === 'Saida'
+            ? 'pill-venda'
+            : m.tipo === 'Entrada'
+            ? 'pill-orcamento'
+            : 'pill-perda';
+        const pillText = m.tipo === 'Saida' ? 'SAÍDA' : m.tipo === 'Entrada' ? 'ENTRADA' : 'PERDA';
+        return `
+          <tr>
+            <td>
+              <strong>${m.produtoNome}</strong><br/>
+              <small class="muted">${m.usuarioNome.split(' ')[0]}</small>
+            </td>
+            <td><strong>${Number(m.quantidade).toFixed(2).replace('.', ',')}</strong></td>
+            <td><span class="${pillClass}">${pillText}</span></td>
+          </tr>
+        `;
+      })
+      .join('');
+  }
+
+  // 3. Gráfico de Barras 3D Central (Saldo Disponível por Categoria)
+  const categorias = [
+    { nome: 'Mercearia Seca', curto: 'Mercearia' },
+    { nome: 'Laticínios e Frios', curto: 'Laticínios' },
+    { nome: 'Hortifrúti', curto: 'Hortifrúti' },
+    { nome: 'Bebidas', curto: 'Bebidas' },
+    { nome: 'Limpeza e Higiene', curto: 'Limpeza' },
+  ];
+
+  const totaisCat = categorias.map((c) => {
+    const soma = estadoApp.produtos
+      .filter((p) => p.categoria === c.nome)
+      .reduce((acc, p) => acc + Number(p.saldoDisponivel || 0), 0);
+    return { ...c, total: Number(soma.toFixed(1)) };
+  });
+
+  const maiorValor = Math.max(...totaisCat.map((c) => c.total), 10);
+  const chartArea = document.getElementById('grafico-categorias-bars');
+  chartArea.innerHTML = totaisCat
+    .map((c) => {
+      const alturaPx = Math.max(Math.round((c.total / maiorValor) * 145), 10);
+      return `
+        <div class="chart-col" title="${c.nome}: ${c.total} disponíveis">
+          <span class="chart-bar-val">${c.total.toFixed(2).replace('.', ',')}</span>
+          <div class="chart-bar-3d" style="height: ${alturaPx}px;"></div>
+          <span class="chart-bar-label">${c.curto}</span>
+        </div>
+      `;
+    })
+    .join('');
+
+  // 4. Painéis Inferiores de Alertas Separados (RF07 / RNF04)
   const containerEstoque = document.getElementById('lista-alertas-estoque');
   if (estoqueBaixo.length === 0) {
     containerEstoque.innerHTML = '<p class="muted">Nenhum produto com estoque baixo no momento.</p>';
@@ -200,9 +294,6 @@ function renderizarDashboardAlertas() {
   }
 }
 
-/**
- * Retorna um badge colorido correspondente ao estado do ciclo de vida do lote (T14 / Seção 6.4).
- */
 function renderizarBadgeEstadoLote(estado) {
   const mapa = {
     Disponivel: { classe: 'badge-success', texto: 'Disponível' },
@@ -217,7 +308,7 @@ function renderizarBadgeEstadoLote(estado) {
 }
 
 /**
- * Renderiza a tabela de produtos com seus respectivos lotes ordenados por validade (FEFO - RN-III).
+ * Renderiza a tabela de produtos e lotes FEFO.
  */
 function renderizarTabelaProdutos() {
   const categoriaFiltro = document.getElementById('filtro-categoria').value;
@@ -289,9 +380,6 @@ function renderizarTabelaProdutos() {
     .join('');
 }
 
-/**
- * Popula os selects de produtos nas abas de Saída (RS001), Entrada (RF04) e Operações em Massa (RF06).
- */
 function popularSelectsDeProdutos() {
   const selectSaida = document.getElementById('saida-produto');
   const selectEntrada = document.getElementById('entrada-produto');
@@ -315,9 +403,6 @@ function popularSelectsDeProdutos() {
   inicializarLinhasMassaSeVazio();
 }
 
-/**
- * Atualiza o select de lotes e o painel lateral da Aba 2 (RS001) ordenando por FEFO (RN-III / CT03).
- */
 function atualizarLotesDaSaida() {
   const idProd = Number(document.getElementById('saida-produto').value);
   const produto = estadoApp.produtos.find((p) => p.id === idProd);
@@ -330,7 +415,6 @@ function atualizarLotesDaSaida() {
     return;
   }
 
-  // Lotes com quantidade > 0 já vêm ordenados por dataValidade ASC (FEFO - RN-III)
   const lotesComSaldo = produto.lotes.filter((l) => Number(l.quantidadeAtual) > 0);
 
   if (lotesComSaldo.length === 0) {
@@ -339,7 +423,6 @@ function atualizarLotesDaSaida() {
     return;
   }
 
-  // Seleciona como padrão o primeiro lote NÃO vencido (FEFO), mas lista também os vencidos caso queira testar o bloqueio CT04
   const primeiroLoteValido = lotesComSaldo.find((l) => !l.vencido) || lotesComSaldo[0];
 
   selectLote.innerHTML =
@@ -381,7 +464,7 @@ function atualizarLotesDaSaida() {
 document.getElementById('saida-produto').addEventListener('change', atualizarLotesDaSaida);
 
 /**
- * Submissão do formulário de Login (RF01).
+ * Login (RF01).
  */
 document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -422,9 +505,6 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
   }
 });
 
-/**
- * Logout da sessão.
- */
 async function fazerLogout() {
   try {
     if (estadoApp.token) {
@@ -442,7 +522,7 @@ async function fazerLogout() {
 document.getElementById('btn-logout').addEventListener('click', fazerLogout);
 
 /**
- * Submissão do Caso de Uso RS001: Registro de Saída de Estoque (RF05 / CT02 / CT03 / CT04 / CT05).
+ * Caso de Uso RS001: Saída de Estoque.
  */
 document.getElementById('form-saida').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -486,7 +566,7 @@ document.getElementById('form-saida').addEventListener('submit', async (e) => {
 });
 
 /**
- * Submissão de Cadastro / Edição de Produto (RF03 / T05).
+ * CRUD de Produtos (RF03).
  */
 document.getElementById('form-produto').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -558,7 +638,7 @@ async function excluirProduto(id) {
 }
 
 /**
- * Submissão de Entrada de Lote (RF04 / T08).
+ * Entrada de Lote (RF04).
  */
 document.getElementById('form-entrada').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -715,10 +795,10 @@ function renderizarTabelaMovimentacoes() {
     .map((m) => {
       const badgeTipo =
         m.tipo === 'Entrada'
-          ? '<span class="badge badge-success">Entrada</span>'
+          ? '<span class="pill-orcamento">ENTRADA</span>'
           : m.tipo === 'Saida'
-          ? '<span class="badge badge-admin">Saída</span>'
-          : '<span class="badge badge-danger">Perda (Vencimento)</span>';
+          ? '<span class="pill-venda">SAÍDA</span>'
+          : '<span class="pill-perda">PERDA</span>';
 
       return `
         <tr>
@@ -737,111 +817,139 @@ function renderizarTabelaMovimentacoes() {
 }
 
 /**
- * Relatórios Gerenciais e Exportação CSV/PDF (RF08 / RE-II / T19–T21).
+ * Relatórios Gerenciais e Exportação CSV/PDF (RF08 / RE-II).
  */
 async function carregarRelatorios() {
   const container = document.getElementById('relatorios-conteudo');
   try {
     const r = await apiFetch('/api/relatorios');
     container.innerHTML = `
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <span class="kpi-label">Patrimônio Total em Estoque (RE-II)</span>
-          <strong>R$ ${Number(r.resumoFinanceiroPatrimonial.valorTotalPatrimonio).toFixed(2)}</strong>
+      <div class="colored-tiles-grid">
+        <div class="color-tile tile-cyan">
+          <div class="tile-body">
+            <div class="tile-value">R$ ${Number(r.resumoFinanceiroPatrimonial.valorTotalPatrimonio).toFixed(2)}</div>
+            <div class="tile-label">Patrimônio Total em Estoque (RE-II)</div>
+          </div>
+          <div class="tile-watermark">💲</div>
+          <div class="tile-footer">Declaração Fiscal de Inventário</div>
         </div>
-        <div class="kpi-card kpi-danger">
-          <span class="kpi-label">Prejuízo Acumulado de Perdas Baixadas</span>
-          <strong>R$ ${Number(r.resumoFinanceiroPatrimonial.valorTotalPrejuizoPerdas).toFixed(2)}</strong>
+        <div class="color-tile tile-red">
+          <div class="tile-body">
+            <div class="tile-value">R$ ${Number(r.resumoFinanceiroPatrimonial.valorTotalPrejuizoPerdas).toFixed(2)}</div>
+            <div class="tile-label">Perdas Baixadas Acumuladas</div>
+          </div>
+          <div class="tile-watermark">👎</div>
+          <div class="tile-footer">Histórico de Vencimento (RE-I)</div>
         </div>
-        <div class="kpi-card kpi-warning">
-          <span class="kpi-label">Lotes Vencidos Pendentes de Baixa</span>
-          <strong>${r.resumoFinanceiroPatrimonial.totalLotesVencidosPendentes} lote(s)</strong>
-        </div>
-      </div>
-
-      <div class="two-col-grid mb-16">
-        <div class="card">
-          <h4>1. Produtos com Maior Saída — Mais Vendidos / Repostos (T19)</h4>
-          <table class="data-table mt-12">
-            <thead>
-              <tr><th>Produto</th><th>Categoria</th><th>Total Saídas</th><th>Valor Estimado</th></tr>
-            </thead>
-            <tbody>
-              ${
-                r.produtosMaisVendidos.length === 0
-                  ? '<tr><td colspan="4" class="muted">Nenhuma saída registrada.</td></tr>'
-                  : r.produtosMaisVendidos
-                      .map(
-                        (p) =>
-                          `<tr><td><strong>${p.nome}</strong></td><td>${p.categoria}</td><td>${p.totalSaidas} ${p.unidadeMedida}</td><td>R$ ${Number(p.valorEstimadoSaidas).toFixed(2)}</td></tr>`
-                      )
-                      .join('')
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <div class="card">
-          <h4>2. Produtos Parados no Estoque — Sem Saídas (T19)</h4>
-          <table class="data-table mt-12">
-            <thead>
-              <tr><th>Produto</th><th>Saldo Parado</th><th>Desde</th><th>Valor Imobilizado</th></tr>
-            </thead>
-            <tbody>
-              ${
-                r.produtosParados.length === 0
-                  ? '<tr><td colspan="4" class="muted">Nenhum produto parado.</td></tr>'
-                  : r.produtosParados
-                      .map(
-                        (p) =>
-                          `<tr><td><strong>${p.nome}</strong></td><td>${p.saldoEmEstoque} ${p.unidadeMedida}</td><td>${p.entradaMaisAntiga}</td><td>R$ ${Number(p.valorParadoEmEstoque).toFixed(2)}</td></tr>`
-                      )
-                      .join('')
-              }
-            </tbody>
-          </table>
+        <div class="color-tile tile-orange">
+          <div class="tile-body">
+            <div class="tile-value">${r.resumoFinanceiroPatrimonial.totalLotesVencidosPendentes}</div>
+            <div class="tile-label">Lotes Vencidos Pendentes</div>
+          </div>
+          <div class="tile-watermark">📊</div>
+          <div class="tile-footer">Aguardando Baixa pelo Admin (T16)</div>
         </div>
       </div>
 
-      <div class="two-col-grid">
-        <div class="card">
-          <h4>3. Histórico de Perdas por Vencimento e Lotes Vencidos (T19 / RE-I)</h4>
-          <table class="data-table mt-12">
-            <thead>
-              <tr><th>Status</th><th>Lote</th><th>Produto</th><th>Qtd</th><th>Prejuízo</th></tr>
-            </thead>
-            <tbody>
-              ${r.perdasPorVencimento.perdasBaixadas
-                .map(
-                  (p) =>
-                    `<tr><td><span class="badge badge-neutral">Baixa Realizada</span></td><td>${p.codigoLote}</td><td>${p.produtoNome}</td><td>${p.quantidade} ${p.unidadeMedida}</td><td>R$ ${Number(p.prejuizoEstimado).toFixed(2)}</td></tr>`
-                )
-                .join('')}
-              ${r.perdasPorVencimento.lotesVencidosPendentesBaixa
-                .map(
-                  (v) =>
-                    `<tr><td><span class="badge badge-danger">Vencido em Estoque</span></td><td>${v.codigoLote}</td><td>${v.produtoNome}</td><td>${v.quantidadeAtual} ${v.unidadeMedida}</td><td>R$ ${Number(v.prejuizoPotencial).toFixed(2)}</td></tr>`
-                )
-                .join('')}
-            </tbody>
-          </table>
+      <div class="floating-tabs-grid mb-16">
+        <div class="floating-tab-wrapper">
+          <div class="floating-tab-header tab-header-blue">
+            1. Produtos com Maior Saída — Mais Vendidos / Repostos (T19)
+          </div>
+          <div class="erp-card floating-tab-card">
+            <table class="data-table">
+              <thead>
+                <tr><th>Produto</th><th>Categoria</th><th>Total Saídas</th><th>Valor Estimado</th></tr>
+              </thead>
+              <tbody>
+                ${
+                  r.produtosMaisVendidos.length === 0
+                    ? '<tr><td colspan="4" class="muted">Nenhuma saída registrada.</td></tr>'
+                    : r.produtosMaisVendidos
+                        .map(
+                          (p) =>
+                            `<tr><td><strong>${p.nome}</strong></td><td>${p.categoria}</td><td>${p.totalSaidas} ${p.unidadeMedida}</td><td>R$ ${Number(p.valorEstimadoSaidas).toFixed(2)}</td></tr>`
+                        )
+                        .join('')
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="card">
-          <h4>4. Movimentações por Funcionário (T20 / RN-IV)</h4>
-          <table class="data-table mt-12">
-            <thead>
-              <tr><th>Funcionário</th><th>Perfil</th><th>Operações</th><th>Saídas</th><th>Entradas</th></tr>
-            </thead>
-            <tbody>
-              ${r.movimentacoesPorFuncionario
-                .map(
-                  (f) =>
-                    `<tr><td><strong>${f.nome}</strong></td><td>${f.perfil}</td><td>${f.totalOperacoes}</td><td>${f.qtdTotalSaidas}</td><td>${f.qtdTotalEntradas}</td></tr>`
-                )
-                .join('')}
-            </tbody>
-          </table>
+        <div class="floating-tab-wrapper">
+          <div class="floating-tab-header tab-header-red">
+            2. Produtos Parados no Estoque — Sem Saídas (T19)
+          </div>
+          <div class="erp-card floating-tab-card">
+            <table class="data-table">
+              <thead>
+                <tr><th>Produto</th><th>Saldo Parado</th><th>Desde</th><th>Valor Imobilizado</th></tr>
+              </thead>
+              <tbody>
+                ${
+                  r.produtosParados.length === 0
+                    ? '<tr><td colspan="4" class="muted">Nenhum produto parado.</td></tr>'
+                    : r.produtosParados
+                        .map(
+                          (p) =>
+                            `<tr><td><strong>${p.nome}</strong></td><td>${p.saldoEmEstoque} ${p.unidadeMedida}</td><td>${p.entradaMaisAntiga}</td><td>R$ ${Number(p.valorParadoEmEstoque).toFixed(2)}</td></tr>`
+                        )
+                        .join('')
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="floating-tabs-grid">
+        <div class="floating-tab-wrapper">
+          <div class="floating-tab-header tab-header-red">
+            3. Histórico de Perdas por Vencimento e Lotes Vencidos (T19 / RE-I)
+          </div>
+          <div class="erp-card floating-tab-card">
+            <table class="data-table">
+              <thead>
+                <tr><th>Status</th><th>Lote</th><th>Produto</th><th>Qtd</th><th>Prejuízo</th></tr>
+              </thead>
+              <tbody>
+                ${r.perdasPorVencimento.perdasBaixadas
+                  .map(
+                    (p) =>
+                      `<tr><td><span class="badge badge-neutral">Baixa Realizada</span></td><td>${p.codigoLote}</td><td>${p.produtoNome}</td><td>${p.quantidade} ${p.unidadeMedida}</td><td>R$ ${Number(p.prejuizoEstimado).toFixed(2)}</td></tr>`
+                  )
+                  .join('')}
+                ${r.perdasPorVencimento.lotesVencidosPendentesBaixa
+                  .map(
+                    (v) =>
+                      `<tr><td><span class="badge badge-danger">Vencido em Estoque</span></td><td>${v.codigoLote}</td><td>${v.produtoNome}</td><td>${v.quantidadeAtual} ${v.unidadeMedida}</td><td>R$ ${Number(v.prejuizoPotencial).toFixed(2)}</td></tr>`
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="floating-tab-wrapper">
+          <div class="floating-tab-header tab-header-blue">
+            4. Movimentações por Funcionário (T20 / RN-IV)
+          </div>
+          <div class="erp-card floating-tab-card">
+            <table class="data-table">
+              <thead>
+                <tr><th>Funcionário</th><th>Perfil</th><th>Operações</th><th>Saídas</th><th>Entradas</th></tr>
+              </thead>
+              <tbody>
+                ${r.movimentacoesPorFuncionario
+                  .map(
+                    (f) =>
+                      `<tr><td><strong>${f.nome}</strong></td><td>${f.perfil}</td><td>${f.totalOperacoes}</td><td>${f.qtdTotalSaidas}</td><td>${f.qtdTotalEntradas}</td></tr>`
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `;
@@ -922,9 +1030,6 @@ async function removerUsuario(id) {
   }
 }
 
-/**
- * Demonstração interativa do Caso de Teste CT01 (tentativa de Funcionário cadastrar produto -> HTTP 403).
- */
 async function testarBloqueioCT01() {
   try {
     await apiFetch('/api/produtos', {
@@ -941,12 +1046,12 @@ async function testarBloqueioCT01() {
   }
 }
 
-// Configura cliques nas abas
-document.querySelectorAll('.tab-btn').forEach((btn) => {
+// Configura cliques nos links do menu lateral
+document.querySelectorAll('.sidebar-link').forEach((btn) => {
   btn.addEventListener('click', () => irParaAba(btn.dataset.tab));
 });
 
-// Verifica se já havia sessão salva ao carregar a página
+// Verifica sessão existente
 window.addEventListener('DOMContentLoaded', async () => {
   if (estadoApp.token && estadoApp.usuario) {
     document.getElementById('login-view').classList.add('hidden');
