@@ -1,0 +1,24 @@
+{
+  "name": "sistema-estoque-mercearia",
+  "version": "1.0.0",
+  "description": "Sistema de Controle de Estoque da Mercearia - MVP (ECOT11A - Laboratório de Engenharia de Software - UNIFEI)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node tests/ct_suite.test.js"
+  },
+  "keywords": [
+    "estoque",
+    "mercearia",
+    "fefo",
+    "engenharia-de-software",
+    "unifei",
+    "ecot11a"
+  ],
+  "author": "Nicolae Lopes (Matrícula: 2024014650)",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

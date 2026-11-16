@@ -1,0 +1,13 @@
+# Dependências do Node.js
+node_modules/
+
+# Banco de dados local SQLite gerado em tempo de execução (se desejar recriar do zero)
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Arquivos de ambiente e logs
+.env
+npm-debug.log*
+.DS_Store
+Thumbs.db
