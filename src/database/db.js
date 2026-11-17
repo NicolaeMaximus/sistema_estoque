@@ -228,6 +228,11 @@ function inicializarBanco() {
   if (totalUsuarios === 0) {
     popularDadosIniciais();
   } else {
+    // Garante que as contas padrão de demonstração estejam sempre com o hash atualizado
+    const stmtSyncHash = db.prepare('UPDATE Usuario SET senhaHash = ? WHERE login = ?');
+    stmtSyncHash.run(gerarHashSenha('admin123'), 'admin');
+    stmtSyncHash.run(gerarHashSenha('func123'), 'carlos');
+    stmtSyncHash.run(gerarHashSenha('func123'), 'mariana');
     sincronizarEstadosEAlertas();
   }
 }
