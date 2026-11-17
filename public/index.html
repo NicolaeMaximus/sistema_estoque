@@ -3,29 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestão Online • Estoque da Mercearia | ECOT11A UNIFEI</title>
+  <title>Gestão Online - Controle de Estoque da Mercearia</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- ====================================================================
-       TELA DE LOGIN (RF01 / RNF02) - No padrão visual Gestão Online
-       ==================================================================== -->
+  <!-- Tela de Login -->
   <div id="login-view" class="login-wrapper">
     <div class="login-card">
       <div class="brand-header">
         <div class="login-cloud-logo">
-          <svg viewBox="0 0 24 24" width="38" height="38" fill="currentColor">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor">
             <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
           </svg>
           <span>GESTÃO ONLINE</span>
         </div>
         <h1>Controle de Estoque da Mercearia</h1>
-        <p>Gestão de Lotes Perecíveis (FEFO), Reposição e Relatórios Fiscais</p>
+        <p>Acesse com seu usuário e senha para gerenciar o estoque</p>
       </div>
 
       <form id="form-login">
         <div class="form-group">
-          <label for="login-input">Usuário (Login)</label>
+          <label for="login-input">Usuário</label>
           <input type="text" id="login-input" placeholder="Ex: admin ou carlos" required autocomplete="username" />
         </div>
         <div class="form-group">
@@ -33,36 +31,33 @@
           <input type="password" id="senha-input" placeholder="Digite sua senha" required autocomplete="current-password" />
         </div>
         <div id="login-erro" class="alert-box alert-error hidden"></div>
-        <button type="submit" class="btn btn-primary btn-full">Entrar no Sistema</button>
+        <button type="submit" class="btn btn-primary btn-full">Entrar</button>
       </form>
 
       <div class="demo-credentials">
-        <p><strong>Acesso Rápido para Avaliação (MVP - ECOT11A):</strong></p>
+        <p>Contas de teste cadastradas:</p>
         <div class="demo-buttons">
           <button type="button" class="btn btn-outline btn-sm" onclick="preencherLogin('admin', 'admin123')">
-            Administrador (Dono)
+            Administrador (admin)
           </button>
           <button type="button" class="btn btn-outline btn-sm" onclick="preencherLogin('carlos', 'func123')">
-            Funcionário (Caixa)
+            Funcionário (carlos)
           </button>
         </div>
       </div>
 
       <footer class="login-footer">
-        Autor: <strong>Nicolae Lopes</strong> (Matrícula: 2024014650) • Prof. Edvard
+        Nicolae Lopes • 2024014650 • ECOT11A UNIFEI
       </footer>
     </div>
   </div>
 
-  <!-- ====================================================================
-       LAYOUT PRINCIPAL PADRÃO "GESTÃO ONLINE" (vendas_1.jpg)
-       Sidebar lateral azul-escura + Topbar clara + Cards coloridos
-       ==================================================================== -->
+  <!-- Painel Principal -->
   <div id="app-view" class="erp-wrapper hidden">
-    <!-- SIDEBAR LATERAL ESQUERDA -->
+    <!-- Menu Lateral -->
     <aside id="erp-sidebar" class="erp-sidebar">
       <div class="sidebar-brand">
-        <svg class="cloud-icon" viewBox="0 0 24 24" width="28" height="28" fill="#ffffff">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="#ffffff">
           <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
         </svg>
         <span class="brand-title">GESTÃO ONLINE</span>
@@ -70,263 +65,300 @@
 
       <div class="sidebar-search">
         <div class="search-input-wrap">
-          <span class="search-icon">🔍</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
           <input type="text" id="menu-search" placeholder="Procurar opção do menu..." oninput="filtrarMenuSidebar(this.value)" />
         </div>
       </div>
 
       <nav class="sidebar-nav" id="sidebar-nav-list">
         <button class="sidebar-link active" data-tab="tab-dashboard" data-title="Painel">
-          <span class="nav-icon">🏠</span>
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+          </span>
           <span class="nav-label">Painel</span>
         </button>
 
-        <button class="sidebar-link" data-tab="tab-saida" data-title="Saída de Estoque (RS001)">
-          <span class="nav-icon">🛒</span>
-          <span class="nav-label">Saídas / Baixas</span>
-          <span class="nav-arrow">›</span>
+        <button class="sidebar-link admin-only" data-tab="tab-usuarios" data-title="Pessoas / Funcionários">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </span>
+          <span class="nav-label">Pessoas</span>
         </button>
 
-        <button class="sidebar-link" data-tab="tab-produtos" data-title="Produtos e Lotes (FEFO)">
-          <span class="nav-icon">🏷️</span>
+        <button class="sidebar-link" data-tab="tab-produtos" data-title="Produtos">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/>
+            </svg>
+          </span>
           <span class="nav-label">Produtos</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="tab-saida" data-title="Saída de Produtos">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+            </svg>
+          </span>
+          <span class="nav-label">Saídas / Baixas</span>
+        </button>
+
+        <button class="sidebar-link admin-only" data-tab="tab-entrada" data-title="Estoque • Entrada de Lotes">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M4 6h16v4H4zm0 6h16v4H4zm0 6h16v4H4z"/>
+            </svg>
+          </span>
+          <span class="nav-label">Estoque</span>
           <span class="nav-arrow">›</span>
         </button>
 
-        <button class="sidebar-link admin-only" data-tab="tab-entrada" data-title="Entrada de Lotes (RF04)">
-          <span class="nav-icon">📦</span>
-          <span class="nav-label">Estoque (Entrada)</span>
+        <button class="sidebar-link admin-only" data-tab="tab-relatorios" data-title="Relatórios de Estoque e Perdas">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+            </svg>
+          </span>
+          <span class="nav-label">Relatórios</span>
           <span class="nav-arrow">›</span>
         </button>
 
-        <button class="sidebar-link" data-tab="tab-massa" data-title="Operações em Massa (RF06)">
-          <span class="nav-icon">📚</span>
+        <button class="sidebar-link" data-tab="tab-massa" data-title="Operações em Massa">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+            </svg>
+          </span>
           <span class="nav-label">Lançamento Massa</span>
           <span class="nav-arrow">›</span>
         </button>
 
-        <button class="sidebar-link admin-only" data-tab="tab-usuarios" data-title="Pessoas / Funcionários (RF02)">
-          <span class="nav-icon">👤</span>
-          <span class="nav-label">Pessoas (Equipe)</span>
-          <span class="nav-arrow">›</span>
-        </button>
-
-        <button class="sidebar-link admin-only" data-tab="tab-relatorios" data-title="Relatórios e Exportação Fiscal (RF08)">
-          <span class="nav-icon">💲</span>
-          <span class="nav-label">Relatórios / Fiscal</span>
-          <span class="nav-arrow">›</span>
-        </button>
-
-        <button class="sidebar-link" data-tab="tab-historico" data-title="Utilitários • Histórico de Movimentações (RN-IV)">
-          <span class="nav-icon">🔧</span>
-          <span class="nav-label">Histórico / Auditoria</span>
+        <button class="sidebar-link" data-tab="tab-historico" data-title="Histórico de Movimentações">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+              <path d="M4 6h16v4H4zm0 6h16v4H4zm0 6h16v4H4z"/>
+            </svg>
+          </span>
+          <span class="nav-label">Histórico</span>
           <span class="nav-arrow">›</span>
         </button>
       </nav>
     </aside>
 
-    <!-- ÁREA DIREITA (TOPBAR + CONTEÚDO) -->
+    <!-- Coluna Principal -->
     <div class="erp-main">
-      <!-- Cabeçalho Superior Claro igual ao vendas_1.jpg -->
+      <!-- Barra Superior -->
       <header class="erp-topbar">
         <div class="topbar-left">
-          <button type="button" class="hamburger-btn" onclick="alternarSidebar()" title="Alternar Menu">
-            ☰
+          <button type="button" class="hamburger-btn" onclick="alternarSidebar()" title="Alternar menu lateral">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="7" x2="20" y2="7"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="17" x2="20" y2="17"></line>
+            </svg>
           </button>
           <span id="topbar-page-title" class="page-title">Painel</span>
         </div>
 
         <div class="topbar-right">
-          <span class="manual-link" onclick="irParaAba('tab-dashboard')" title="ECOT11A - Nicolae Lopes (2024014650)">
-            Manual Sistema Gestão Mercearia
+          <span class="manual-link" onclick="irParaAba('tab-dashboard')">
+            Manual Sistema Gestão Online
           </span>
 
           <div class="user-chip">
-            <span class="user-silhouette">👤</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="#5a626a">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
             <span id="user-nome">Usuário</span>
             <span id="user-perfil-badge" class="badge">Perfil</span>
           </div>
 
-          <button type="button" class="bell-btn" onclick="irParaAba('tab-dashboard')" title="Alertas Ativos (RF07)">
-            🔔
+          <button type="button" class="bell-btn" onclick="irParaAba('tab-dashboard')" title="Avisos ativos">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+            </svg>
             <span id="bell-count" class="bell-badge">0</span>
           </button>
 
-          <button type="button" id="btn-logout" class="btn btn-danger btn-sm">Sair</button>
+          <button type="button" id="btn-logout" class="btn btn-outline btn-sm">Sair</button>
         </div>
       </header>
 
-      <!-- Notificação Global (Toast) -->
+      <!-- Feedback de Ações -->
       <div id="global-toast" class="toast hidden"></div>
 
-      <!-- Conteúdo das Abas -->
+      <!-- Conteúdo das Telas -->
       <main class="erp-content">
 
-        <!-- ================================================================
-             ABA 1: PAINEL PRINCIPAL (Idêntico ao layout vendas_1.jpg)
-             4 Cards Coloridos + 3 Colunas Centrais + 2 Abas Flutuantes de Alerta
-             ================================================================ -->
+        <!-- ABA 1: PAINEL -->
         <section id="tab-dashboard" class="tab-panel active">
-          <!-- 4 Cartões Coloridos Superiores (Ciano, Laranja, Verde, Vermelho) -->
+          <!-- 4 Cards Superiores -->
           <div class="colored-tiles-grid">
-            <!-- Tile 1: Azul Ciano -->
             <div class="color-tile tile-cyan" onclick="irParaAba('tab-produtos')">
               <div class="tile-body">
                 <div class="tile-value" id="kpi-total-produtos">0</div>
-                <div class="tile-label">Produtos no Catálogo</div>
+                <div class="tile-label">Produtos Cadastrados</div>
               </div>
-              <div class="tile-watermark">🛒</div>
-              <div class="tile-footer">Ver Catálogo e Lotes FEFO ➜</div>
+              <svg class="tile-watermark-svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+              </svg>
+              <div class="tile-footer">Consultar Estoque ➜</div>
             </div>
 
-            <!-- Tile 2: Laranja -->
             <div class="color-tile tile-orange" onclick="irParaAba('tab-saida')">
               <div class="tile-body">
-                <div class="tile-value" id="kpi-estoque-baixo">0</div>
-                <div class="tile-label">Itens p/ Repor (Estoque Baixo)</div>
-              </div>
-              <div class="tile-watermark">📊</div>
-              <div class="tile-footer" id="tile-orange-sub">Regra RN-II • Estoque Mínimo</div>
-            </div>
-
-            <!-- Tile 3: Verde -->
-            <div class="color-tile tile-green" onclick="irParaAba('tab-historico')">
-              <div class="tile-body">
                 <div class="tile-value" id="kpi-movimentacoes">0</div>
-                <div class="tile-label">Movimentações Registradas</div>
+                <div class="tile-label">Movimentações (Período)</div>
               </div>
-              <div class="tile-watermark">👍</div>
-              <div class="tile-footer">Histórico Rastreável (RN-IV) ➜</div>
+              <svg class="tile-watermark-svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+              </svg>
+              <div class="tile-footer" id="tile-orange-sub">Entradas e Saídas Registradas</div>
             </div>
 
-            <!-- Tile 4: Vermelho -->
+            <div class="color-tile tile-green" onclick="irParaAba('tab-dashboard')">
+              <div class="tile-body">
+                <div class="tile-value" id="kpi-estoque-baixo">0</div>
+                <div class="tile-label">Itens para Repor</div>
+              </div>
+              <svg class="tile-watermark-svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
+              </svg>
+              <div class="tile-footer">Abaixo do Estoque Mínimo ➜</div>
+            </div>
+
             <div class="color-tile tile-red" onclick="irParaAba('tab-dashboard')">
               <div class="tile-body">
                 <div class="tile-value" id="kpi-validade">0</div>
-                <div class="tile-label">Validade Próxima / Vencidos</div>
+                <div class="tile-label">Alertas de Validade</div>
               </div>
-              <div class="tile-watermark">👎</div>
-              <div class="tile-footer">Regra FEFO (RN-III / RE-I) ➜</div>
+              <svg class="tile-watermark-svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/>
+              </svg>
+              <div class="tile-footer">Vencimento Próximo / Vencidos ➜</div>
             </div>
           </div>
 
-          <!-- Linha Central de 3 Colunas (Tabela Resumo | Gráfico de Barras | Card de Ação Rápida) -->
+          <!-- Linha Central: Últimas Movimentações | Gráfico Diário/Categorias | Card lateral -->
           <div class="dashboard-middle-grid">
-            <!-- Coluna Esquerda: Últimas Movimentações (Estilo Cliente | Total | Badge) -->
             <div class="erp-card">
               <table class="mini-status-table">
                 <thead>
                   <tr>
-                    <th>Produto / Responsável</th>
+                    <th>Produto</th>
                     <th>Qtd.</th>
-                    <th>Operação</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="mini-movimentacoes-body"></tbody>
               </table>
             </div>
 
-            <!-- Coluna Central: Gráfico de Barras Verticais (Saldo Disponível por Categoria) -->
             <div class="erp-card chart-card">
-              <h4 class="chart-title">Estoque Disponível por Categoria (Unidades/Kg/L)</h4>
+              <h4 class="chart-title">Estoque Disponível (Por Categoria)</h4>
               <div class="bar-chart-wrapper">
-                <div class="y-axis-label">Qtd. Total em Estoque</div>
-                <div class="bar-chart-area" id="grafico-categorias-bars"></div>
+                <div class="y-axis-label">Saldo Total Disponível</div>
+                <div class="bar-chart-grid">
+                  <div class="y-scale">
+                    <span>60</span>
+                    <span>45</span>
+                    <span>30</span>
+                    <span>15</span>
+                    <span>0</span>
+                  </div>
+                  <div class="bar-chart-area" id="grafico-categorias-bars"></div>
+                </div>
               </div>
-              <div class="x-axis-title">Categorias da Mercearia (Lab 1)</div>
+              <div class="x-axis-title">Categoria</div>
             </div>
 
-            <!-- Coluna Direita: Callout de Ação Rápida (Estilo "Precisando emitir boletos?") -->
             <div class="erp-card promo-action-card">
-              <h4>Precisando registrar saída rápida?</h4>
-              <div class="promo-illustration">
-                <span class="promo-dollar">📦</span>
+              <h4>Precisando dar baixa no estoque?</h4>
+              <div class="promo-svg-wrap">
+                <svg viewBox="0 0 64 64" width="84" height="84" fill="#0b7fab">
+                  <path d="M32 6c-6.6 0-12 4.5-12 10 0 4.4 3.4 7.4 9.5 9v9.2c-3.2-.6-5.5-2.5-5.8-5.2h-5.2c.4 5.5 4.6 9.3 11 10.1V44h5v-4.9c6.6-.9 11-4.8 11-10.6 0-4.8-3.5-7.8-10-9.3v-8.6c2.7.6 4.6 2.2 5 4.6h5.2c-.5-5-4.5-8.5-10.2-9.3V2h-5v4zm-1.5 13.4c-3.4-1-5.2-2.3-5.2-4.4 0-2.4 2.1-4.2 5.2-4.6v9zm5 5.4c3.8 1 5.7 2.4 5.7 4.8 0 2.6-2.3 4.6-5.7 5v-9.8z"/>
+                  <path d="M10 48h28c2.2 0 4 1.8 4 4H24l12 4c2.8.9 5.9.5 8.4-1l11.6-7v10l-16 8c-3.1 1.5-6.7 1.8-10 .8L14 62v-6H6v-8h4z"/>
+                </svg>
               </div>
-              <h5>Saída em 3 Passos!</h5>
-              <p>O sistema prioriza automaticamente o lote com validade mais próxima (FEFO — RN-III) e bloqueia vencidos.</p>
+              <h5>Saída Rápida FEFO</h5>
+              <p>Retire produtos priorizando automaticamente os lotes com validade mais próxima.</p>
               <button class="btn btn-primary btn-sm mt-12" onclick="irParaAba('tab-saida')">
-                Registrar Saída (RS001)
+                Registrar Saída
               </button>
             </div>
           </div>
 
-          <!-- Linha Inferior: Os 2 Painéis de Alertas Separados com Abas Flutuantes Coloridas (RF07 / RNF04) -->
+          <!-- Linha Inferior: Abas Flutuantes de Alertas Separados no Login -->
           <div class="floating-tabs-grid">
-            <!-- Painel 1: Aba Vermelha/Laranja - Itens para Repor (Estoque Baixo - RN-II) -->
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-red">
-                Itens para Repor — Estoque Baixo (RN-II) • <span id="badge-count-estoque">0</span>
+                Itens para Repor (Estoque Baixo) • <span id="badge-count-estoque">0</span>
               </div>
               <div class="erp-card floating-tab-card">
-                <p class="card-subtitle">Produtos cujo saldo disponível atingiu ou ficou abaixo do estoque mínimo configurado pelo Administrador.</p>
+                <p class="card-subtitle">Produtos que atingiram a quantidade mínima definida para reposição.</p>
                 <div id="lista-alertas-estoque" class="alert-list"></div>
               </div>
             </div>
 
-            <!-- Painel 2: Aba Azul - Produtos Próximos do Vencimento / Vencidos (FEFO - RN-III / RE-I) -->
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-blue">
-                Vencimento Próximo / Vencidos (FEFO — RN-III) • <span id="badge-count-validade">0</span>
+                Produtos Próximos do Vencimento / Vencidos • <span id="badge-count-validade">0</span>
               </div>
               <div class="erp-card floating-tab-card">
-                <p class="card-subtitle">Lotes perecíveis ordenados pelo vencimento mais próximo primeiro. Lotes vencidos têm saída bloqueada (RE-I / CT04).</p>
+                <p class="card-subtitle">Lotes perecíveis ordenados pelo vencimento mais próximo primeiro (FEFO).</p>
                 <div id="lista-alertas-validade" class="alert-list"></div>
               </div>
             </div>
           </div>
-
-          <!-- Demonstração de Segurança CT01 para perfil Funcionário -->
-          <div id="box-teste-ct01" class="erp-card demo-ct-box hidden">
-            <h4>Verificação do Caso de Teste CT01 (RNF02 — Controle de Perfil HTTP 403)</h4>
-            <p>Você está logado como <strong>Funcionário</strong>. As opções administrativas estão ocultas no menu lateral, mas você pode testar a tentativa de acesso direto à API de cadastro para comprovar o bloqueio <code>HTTP 403 Forbidden</code> exigido no CT01:</p>
-            <button type="button" class="btn btn-outline btn-sm mt-12" onclick="testarBloqueioCT01()">
-              Simular Tentativa de Cadastrar Produto como Funcionário (CT01)
-            </button>
-          </div>
         </section>
 
-        <!-- ================================================================
-             ABA 2: REGISTRAR SAÍDA EM NO MÁXIMO 3 PASSOS (RF05 / RS001 / RNF04)
-             ================================================================ -->
+        <!-- ABA 2: SAÍDA DE ESTOQUE -->
         <section id="tab-saida" class="tab-panel">
           <div class="two-col-grid">
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-blue">
-                Registro de Saída em 3 Passos — Caso de Uso RS001
+                Registrar Saída de Produtos
               </div>
               <div class="erp-card floating-tab-card">
                 <form id="form-saida">
                   <div class="step-box">
-                    <span class="step-number">Passo 1</span>
+                    <span class="step-number">1. Produto</span>
                     <div class="form-group">
-                      <label for="saida-produto">Selecione o Produto</label>
+                      <label for="saida-produto">Selecione o item do estoque</label>
                       <select id="saida-produto" required></select>
                     </div>
                   </div>
 
                   <div class="step-box">
-                    <span class="step-number">Passo 2</span>
+                    <span class="step-number">2. Lote e Quantidade</span>
                     <div class="form-group">
-                      <label for="saida-lote">Lote a Retirar (Ordenado por Validade Mais Próxima — FEFO RN-III)</label>
+                      <label for="saida-lote">Lote (Ordenado por validade mais próxima)</label>
                       <select id="saida-lote"></select>
-                      <small class="help-text">O lote que vence primeiro já vem selecionado (FEFO - CT03). Você também pode selecionar outro lote para testar o bloqueio de lote vencido (CT04).</small>
+                      <small class="help-text">O lote com vencimento mais próximo já vem selecionado por padrão.</small>
                     </div>
                     <div class="form-row">
                       <div class="form-group">
-                        <label for="saida-quantidade">Quantidade a Retirar</label>
+                        <label for="saida-quantidade">Quantidade</label>
                         <input type="number" id="saida-quantidade" step="0.01" min="0.01" placeholder="Ex: 2" required />
                       </div>
                       <div class="form-group">
-                        <label for="saida-obs">Motivo / Observação (Opcional)</label>
-                        <input type="text" id="saida-obs" placeholder="Venda no balcão / Reposição" />
+                        <label for="saida-obs">Observação</label>
+                        <input type="text" id="saida-obs" placeholder="Venda / Reposição de prateleira" />
                       </div>
                     </div>
                   </div>
 
                   <div class="step-box">
-                    <span class="step-number">Passo 3</span>
+                    <span class="step-number">3. Confirmação</span>
                     <button type="submit" class="btn btn-primary btn-full">
-                      Confirmar Registro de Saída (RS001)
+                      Confirmar Saída
                     </button>
                   </div>
                 </form>
@@ -335,12 +367,12 @@
 
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-red">
-                Fila de Lotes FEFO do Produto Selecionado (RN-III)
+                Lotes Disponíveis do Produto
               </div>
               <div class="erp-card floating-tab-card">
-                <p class="card-subtitle">Verifica disponibilidade em estoque (RN-I) e estado do ciclo de vida do lote (T14).</p>
+                <p class="card-subtitle">Ordem de retirada sugerida pela data de validade (FEFO).</p>
                 <div id="saida-resumo-lotes" class="lotes-preview">
-                  <p class="muted">Selecione um produto para visualizar seus lotes ordenados por validade.</p>
+                  <p class="muted">Selecione um produto para ver os lotes.</p>
                 </div>
                 <div id="saida-avisos-resultado" class="mt-12"></div>
               </div>
@@ -348,21 +380,18 @@
           </div>
         </section>
 
-        <!-- ================================================================
-             ABA 3: CONSULTA E CRUD DE PRODUTOS E LOTES (RF03 / T05 / T06 / T10 / T14)
-             ================================================================ -->
+        <!-- ABA 3: PRODUTOS -->
         <section id="tab-produtos" class="tab-panel">
-          <!-- Formulário de Cadastro / Edição de Produto (Visível apenas para Administrador - RF03 / CT01) -->
           <div class="floating-tab-wrapper admin-only mb-16">
             <div class="floating-tab-header tab-header-blue" id="titulo-form-produto">
-              Cadastrar Novo Produto no Catálogo (Exclusivo Administrador — RF03)
+              Cadastrar Produto
             </div>
             <div class="erp-card floating-tab-card">
               <form id="form-produto" class="form-grid-6">
                 <input type="hidden" id="prod-id" />
                 <div class="form-group">
                   <label for="prod-nome">Nome do Produto</label>
-                  <input type="text" id="prod-nome" placeholder="Ex: Queijo Minas Frescal 500g" required />
+                  <input type="text" id="prod-nome" placeholder="Ex: Queijo Minas 500g" required />
                 </div>
                 <div class="form-group">
                   <label for="prod-categoria">Categoria</label>
@@ -388,16 +417,16 @@
                   <input type="number" id="prod-preco" step="0.01" min="0" placeholder="14.90" required />
                 </div>
                 <div class="form-group">
-                  <label for="prod-minimo">Estoque Mínimo (RN-II)</label>
+                  <label for="prod-minimo">Estoque Mínimo</label>
                   <input type="number" id="prod-minimo" step="0.01" min="0" placeholder="10" required />
                 </div>
                 <div class="form-group checkbox-group">
                   <label>
                     <input type="checkbox" id="prod-perecivel" checked />
-                    Perecível (Validade p/ Lote — RE-I)
+                    Produto Perecível
                   </label>
                   <div class="btn-row">
-                    <button type="submit" class="btn btn-primary btn-sm">Salvar Produto</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
                     <button type="button" id="btn-cancelar-edicao" class="btn btn-outline btn-sm hidden" onclick="limparFormProduto()">Cancelar</button>
                   </div>
                 </div>
@@ -407,10 +436,10 @@
 
           <div class="erp-card">
             <div class="section-header">
-              <h4>Lista de Produtos e Lotes Ordenados por FEFO (T06 / T10)</h4>
+              <h4>Catálogo de Produtos e Lotes</h4>
               <div class="filter-bar">
                 <select id="filtro-categoria" onchange="renderizarTabelaProdutos()">
-                  <option value="">Todas as Categorias (5)</option>
+                  <option value="">Todas as Categorias</option>
                   <option value="Mercearia Seca">Mercearia Seca</option>
                   <option value="Laticínios e Frios">Laticínios e Frios</option>
                   <option value="Hortifrúti">Hortifrúti</option>
@@ -432,8 +461,8 @@
                     <th>Preço (R$)</th>
                     <th>Saldo Disponível</th>
                     <th>Estoque Mín.</th>
-                    <th>Status &amp; Lotes (FEFO)</th>
-                    <th class="admin-only">Ações (Admin)</th>
+                    <th>Lotes (Ordem de Validade)</th>
+                    <th class="admin-only">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="tabela-produtos-body"></tbody>
@@ -442,18 +471,16 @@
           </div>
         </section>
 
-        <!-- ================================================================
-             ABA 4: ENTRADA DE LOTE COM VALIDADE (RF04 / T08)
-             ================================================================ -->
+        <!-- ABA 4: ENTRADA DE LOTE -->
         <section id="tab-entrada" class="tab-panel">
           <div class="floating-tab-wrapper max-w-600">
             <div class="floating-tab-header tab-header-blue">
-              Registrar Entrada de Lote de Fornecedor (RF04 / T08)
+              Registrar Entrada de Lote
             </div>
             <div class="erp-card floating-tab-card">
               <form id="form-entrada">
                 <div class="form-group">
-                  <label for="entrada-produto">Produto Recebido</label>
+                  <label for="entrada-produto">Produto</label>
                   <select id="entrada-produto" required></select>
                 </div>
                 <div class="form-row">
@@ -468,41 +495,39 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="entrada-validade">Data de Validade do Lote (Obrigatória p/ Perecíveis — RE-I)</label>
+                    <label for="entrada-validade">Data de Validade</label>
                     <input type="date" id="entrada-validade" />
                   </div>
                   <div class="form-group">
                     <label for="entrada-obs">Fornecedor / Observação</label>
-                    <input type="text" id="entrada-obs" placeholder="Ex: Entrega Distribuidora Sul" />
+                    <input type="text" id="entrada-obs" placeholder="Ex: Entrega semanal" />
                   </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full">Registrar Entrada de Lote (ACID)</button>
+                <button type="submit" class="btn btn-primary btn-full">Salvar Entrada</button>
               </form>
             </div>
           </div>
         </section>
 
-        <!-- ================================================================
-             ABA 5: ADIÇÃO E REMOÇÃO EM MASSA (RF06 / T17 / RNF03)
-             ================================================================ -->
+        <!-- ABA 5: OPERAÇÕES EM MASSA -->
         <section id="tab-massa" class="tab-panel">
           <div class="floating-tab-wrapper">
             <div class="floating-tab-header tab-header-blue">
-              Lançamento de Entrada e Saída em Massa (RF06 / T17 / RNF03)
+              Lançamento de Movimentações em Massa
             </div>
             <div class="erp-card floating-tab-card">
               <form id="form-massa">
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="massa-tipo">Tipo de Operação em Massa</label>
+                    <label for="massa-tipo">Tipo de Lançamento</label>
                     <select id="massa-tipo" onchange="atualizarModoMassa()">
-                      <option value="Saida">Saída em Massa (Venda / Reposição de múltiplos itens)</option>
-                      <option value="Entrada" class="admin-only">Entrada em Massa (Recebimento de múltiplos lotes - Admin)</option>
+                      <option value="Saida">Saída de vários produtos</option>
+                      <option value="Entrada" class="admin-only">Entrada de vários lotes</option>
                     </select>
                   </div>
                   <div class="form-group">
-                    <label for="massa-obs">Observação Geral do Lote de Operações</label>
-                    <input type="text" id="massa-obs" placeholder="Ex: Reposição matinal de prateleiras" />
+                    <label for="massa-obs">Observação Geral</label>
+                    <input type="text" id="massa-obs" placeholder="Ex: Reposição matinal" />
                   </div>
                 </div>
 
@@ -510,10 +535,10 @@
 
                 <div class="btn-row mt-12">
                   <button type="button" class="btn btn-outline btn-sm" onclick="adicionarLinhaMassa()">
-                    + Adicionar Mais um Item à Operação
+                    + Adicionar Item
                   </button>
                   <button type="submit" class="btn btn-primary">
-                    Executar Operação em Massa (Transação Única ACID)
+                    Confirmar Lançamento em Massa
                   </button>
                 </div>
               </form>
@@ -521,22 +546,20 @@
           </div>
         </section>
 
-        <!-- ================================================================
-             ABA 6: HISTÓRICO DE MOVIMENTAÇÕES VINCULADO AO FUNCIONÁRIO (RN-IV / T11)
-             ================================================================ -->
+        <!-- ABA 6: HISTÓRICO -->
         <section id="tab-historico" class="tab-panel">
           <div class="erp-card">
             <div class="section-header">
               <div>
-                <h4>Histórico de Movimentações por Funcionário (RN-IV / T11)</h4>
-                <p class="card-subtitle">Toda entrada, saída ou baixa de perda fica gravada com data/hora, lote e o funcionário responsável.</p>
+                <h4>Histórico de Movimentações</h4>
+                <p class="card-subtitle">Registro completo de entradas, saídas e baixas por vencimento.</p>
               </div>
               <div class="filter-bar">
                 <select id="filtro-mov-tipo" onchange="carregarMovimentacoes()">
                   <option value="">Todos os Tipos</option>
                   <option value="Entrada">Entradas</option>
                   <option value="Saida">Saídas</option>
-                  <option value="Perda">Baixas de Perda (Vencimento)</option>
+                  <option value="Perda">Perdas por Vencimento</option>
                 </select>
               </div>
             </div>
@@ -549,9 +572,9 @@
                     <th>Data / Hora</th>
                     <th>Tipo</th>
                     <th>Produto</th>
-                    <th>Lote (Validade)</th>
+                    <th>Lote</th>
                     <th>Quantidade</th>
-                    <th>Responsável (RN-IV)</th>
+                    <th>Funcionário</th>
                     <th>Observação</th>
                   </tr>
                 </thead>
@@ -561,21 +584,19 @@
           </div>
         </section>
 
-        <!-- ================================================================
-             ABA 7: RELATÓRIOS GERENCIAIS E EXPORTAÇÃO CSV/PDF (RF08 / RE-II / T19 / T20 / T21)
-             ================================================================ -->
+        <!-- ABA 7: RELATÓRIOS -->
         <section id="tab-relatorios" class="tab-panel">
           <div class="section-header">
             <div>
-              <h3>Relatórios Gerenciais e Declaração Fiscal de Estoque (RF08 / RE-II / T19–T21)</h3>
-              <p>Análise de produtos com maior saída, produtos parados, perdas por vencimento e desempenho por funcionário.</p>
+              <h3>Relatórios de Estoque e Declaração Patrimonial</h3>
+              <p class="muted">Produtos mais vendidos, itens parados, perdas por vencimento e histórico por funcionário.</p>
             </div>
             <div class="header-actions">
               <button type="button" class="btn btn-primary btn-sm" onclick="exportarRelatorio('csv')">
-                Exportar CSV (Planilha Fiscal — RE-II)
+                Exportar CSV
               </button>
               <button type="button" class="btn btn-outline btn-sm" onclick="exportarRelatorio('pdf')">
-                Abrir / Imprimir Relatório em PDF (RE-II)
+                Exportar / Imprimir PDF
               </button>
             </div>
           </div>
@@ -583,44 +604,42 @@
           <div id="relatorios-conteudo"></div>
         </section>
 
-        <!-- ================================================================
-             ABA 8: GESTÃO DE FUNCIONÁRIOS (RF02 / T04 / CT01)
-             ================================================================ -->
+        <!-- ABA 8: FUNCIONÁRIOS -->
         <section id="tab-usuarios" class="tab-panel">
           <div class="two-col-grid">
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-blue">
-                Cadastrar Novo Funcionário (Exclusivo Admin — RF02)
+                Novo Funcionário
               </div>
               <div class="erp-card floating-tab-card">
                 <form id="form-usuario">
                   <div class="form-group">
                     <label for="usr-nome">Nome Completo</label>
-                    <input type="text" id="usr-nome" placeholder="Ex: João Pereira (Reposição)" required />
+                    <input type="text" id="usr-nome" placeholder="Ex: João Pereira" required />
                   </div>
                   <div class="form-group">
-                    <label for="usr-login">Login de Acesso</label>
+                    <label for="usr-login">Login</label>
                     <input type="text" id="usr-login" placeholder="Ex: joao" required />
                   </div>
                   <div class="form-group">
-                    <label for="usr-senha">Senha Inicial</label>
-                    <input type="password" id="usr-senha" placeholder="Mínimo 4 caracteres" required />
+                    <label for="usr-senha">Senha</label>
+                    <input type="password" id="usr-senha" placeholder="Senha de acesso" required />
                   </div>
                   <div class="form-group">
-                    <label for="usr-perfil">Perfil de Acesso (RF01)</label>
+                    <label for="usr-perfil">Perfil</label>
                     <select id="usr-perfil">
-                      <option value="Funcionario">Funcionário (Consulta, Alertas e Registro de Saída)</option>
-                      <option value="Administrador">Administrador (Acesso Total, Cadastros e Relatórios)</option>
+                      <option value="Funcionario">Funcionário (Caixa / Reposição)</option>
+                      <option value="Administrador">Administrador</option>
                     </select>
                   </div>
-                  <button type="submit" class="btn btn-primary btn-full">Cadastrar Conta (Hash SHA-256/scrypt)</button>
+                  <button type="submit" class="btn btn-primary btn-full">Cadastrar</button>
                 </form>
               </div>
             </div>
 
             <div class="floating-tab-wrapper">
               <div class="floating-tab-header tab-header-red">
-                Pessoas / Contas Cadastradas
+                Usuários Cadastrados
               </div>
               <div class="erp-card floating-tab-card">
                 <div class="table-responsive">
@@ -646,10 +665,12 @@
       </main>
     </div>
 
-    <!-- Widget Flutuante Inferior Direito "Online" idêntico ao vendas_1.jpg -->
-    <div class="online-status-bar" onclick="irParaAba('tab-dashboard')" title="Banco SQLite Conectado (ACID - RNF03)">
-      <span><span class="online-dot"></span> Online • SQLite ACID</span>
-      <span>⌃</span>
+    <!-- Barra Online inferior direita -->
+    <div class="online-status-bar" onclick="irParaAba('tab-dashboard')">
+      <span>Online</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#5a626a" stroke-width="2">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
     </div>
   </div>
 

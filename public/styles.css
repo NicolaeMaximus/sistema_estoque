@@ -1,30 +1,23 @@
-/* ==========================================================================
-   ECOT11A - LABORATÓRIO DE ENGENHARIA DE SOFTWARE (UNIFEI)
-   Sistema de Controle de Estoque da Mercearia - Padrão Visual "Gestão Online" (vendas_1.jpg)
-   Autor: Nicolae Lopes (2024014650)
-   ========================================================================== */
-
+/* Estilos principais do Sistema de Controle de Estoque - Layout Gestão Online */
 :root {
-  --bg-page: #f2f4f7;
+  --bg-page: #f3f5f8;
   --surface: #ffffff;
-  --text: #334155;
-  --text-dark: #1e293b;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --sidebar-bg-top: #1d3c5c;
-  --sidebar-bg-bottom: #12283f;
-  --tile-cyan: #00b5e2;
-  --tile-cyan-dark: #009dc4;
+  --text: #374151;
+  --text-dark: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --sidebar-top: #1f4163;
+  --sidebar-bottom: #122940;
+  --tile-cyan: #00b5e5;
+  --tile-cyan-dark: #009dc7;
   --tile-orange: #f39c12;
-  --tile-orange-dark: #d98809;
+  --tile-orange-dark: #da8c10;
   --tile-green: #00a65a;
   --tile-green-dark: #008d4c;
   --tile-red: #dd4b39;
-  --tile-red-dark: #c53f2e;
+  --tile-red-dark: #c64333;
   --blue-tab: #3c8dbc;
   --red-tab: #dd4b39;
-  --primary: #009dc4;
-  --primary-hover: #0084a6;
 }
 
 * {
@@ -34,7 +27,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-page);
   color: var(--text);
   line-height: 1.45;
@@ -45,45 +38,42 @@ body {
   display: none !important;
 }
 
-/* ==========================================================================
-   TELA DE LOGIN
-   ========================================================================== */
+/* Login */
 .login-wrapper {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(150deg, var(--sidebar-bg-top) 0%, var(--sidebar-bg-bottom) 100%);
+  background: linear-gradient(155deg, var(--sidebar-top) 0%, var(--sidebar-bottom) 100%);
 }
 
 .login-card {
   background: var(--surface);
   width: 100%;
-  max-width: 430px;
-  border-radius: 8px;
-  padding: 30px 28px;
-  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.35);
+  max-width: 410px;
+  border-radius: 6px;
+  padding: 28px 26px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
 }
 
 .login-cloud-logo {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--sidebar-bg-top);
-  font-weight: 800;
+  color: var(--sidebar-top);
+  font-weight: 700;
   font-size: 16px;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .brand-header {
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .brand-header h1 {
-  font-size: 20px;
+  font-size: 19px;
   color: var(--text-dark);
   margin-bottom: 4px;
 }
@@ -94,7 +84,7 @@ body {
 }
 
 .demo-credentials {
-  margin-top: 20px;
+  margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
   text-align: center;
@@ -113,51 +103,47 @@ body {
 }
 
 .login-footer {
-  margin-top: 18px;
+  margin-top: 16px;
   text-align: center;
   font-size: 11.5px;
   color: var(--muted);
 }
 
-/* ==========================================================================
-   ESTRUTURA ERP (SIDEBAR ESQUERDA + TOPBAR + CONTEÚDO) - Padrão vendas_1.jpg
-   ========================================================================== */
+/* Layout Principal */
 .erp-wrapper {
   display: flex;
   min-height: 100vh;
 }
 
 .erp-sidebar {
-  width: 235px;
+  width: 230px;
   flex-shrink: 0;
   background:
-    radial-gradient(circle at 20% 80%, rgba(44, 105, 158, 0.35) 0%, transparent 55%),
-    linear-gradient(180deg, var(--sidebar-bg-top) 0%, #16324f 60%, var(--sidebar-bg-bottom) 100%);
+    radial-gradient(circle at 25% 75%, rgba(56, 128, 188, 0.28) 0%, transparent 55%),
+    linear-gradient(180deg, var(--sidebar-top) 0%, #173452 55%, var(--sidebar-bottom) 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-  transition: width 0.2s ease, margin-left 0.2s ease;
+  transition: margin-left 0.2s ease;
 }
 
 .erp-sidebar.collapsed {
-  margin-left: -235px;
+  margin-left: -230px;
 }
 
 .sidebar-brand {
-  height: 58px;
+  height: 56px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .brand-title {
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  color: #ffffff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .sidebar-search {
@@ -167,15 +153,11 @@ body {
 .search-input-wrap {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 4px;
-  padding: 6px 10px;
-  gap: 6px;
-}
-
-.search-icon {
-  font-size: 12px;
-  opacity: 0.8;
+  padding: 7px 10px;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .search-input-wrap input {
@@ -195,7 +177,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 4px 12px 20px;
-  gap: 4px;
+  gap: 3px;
 }
 
 .sidebar-link {
@@ -203,16 +185,15 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 11px 14px;
+  padding: 10px 14px;
   border: none;
   border-radius: 4px;
   background: transparent;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .sidebar-link:hover {
@@ -220,18 +201,18 @@ body {
   color: #ffffff;
 }
 
-/* Item ativo com fundo branco igual ao botão "Painel" em vendas_1.jpg */
 .sidebar-link.active {
   background: #ffffff;
-  color: #374151;
+  color: #4b5563;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
 }
 
 .nav-icon {
-  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  text-align: center;
 }
 
 .nav-label {
@@ -239,11 +220,11 @@ body {
 }
 
 .nav-arrow {
-  font-size: 16px;
-  opacity: 0.75;
+  font-size: 15px;
+  opacity: 0.7;
 }
 
-/* Área principal direita */
+/* Coluna Direita */
 .erp-main {
   flex: 1;
   display: flex;
@@ -252,9 +233,9 @@ body {
 }
 
 .erp-topbar {
-  height: 58px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e2e8f0;
+  height: 56px;
+  background: #f8f9fb;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -274,12 +255,10 @@ body {
   background: #ffffff;
   border: 1px solid #d1d5db;
   color: #4b5563;
-  font-size: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .hamburger-btn:hover {
@@ -313,7 +292,7 @@ body {
   align-items: center;
   gap: 6px;
   color: #4b5563;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 13px;
 }
 
@@ -322,11 +301,9 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #1d4e89;
-  color: #ffffff;
+  background: #144372;
   border: none;
   cursor: pointer;
-  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -334,8 +311,8 @@ body {
 
 .bell-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -3px;
+  right: -3px;
   background: var(--tile-red);
   color: #fff;
   font-size: 10px;
@@ -356,9 +333,7 @@ body {
   display: block;
 }
 
-/* ==========================================================================
-   4 CARTÕES COLORIDOS SUPERIORES (Ciano, Laranja, Verde, Vermelho) - vendas_1.jpg
-   ========================================================================== */
+/* 4 Cards Superiores Coloridos */
 .colored-tiles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -371,13 +346,13 @@ body {
   border-radius: 4px;
   color: #ffffff;
   overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: transform 0.12s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 126px;
+  min-height: 124px;
 }
 
 .color-tile:hover {
@@ -414,12 +389,13 @@ body {
   opacity: 0.95;
 }
 
-.tile-watermark {
+.tile-watermark-svg {
   position: absolute;
   right: 14px;
   top: 12px;
-  font-size: 54px;
-  opacity: 0.18;
+  width: 68px;
+  height: 68px;
+  opacity: 0.16;
   z-index: 1;
   pointer-events: none;
 }
@@ -432,14 +408,12 @@ body {
   z-index: 2;
 }
 
-/* ==========================================================================
-   LINHA CENTRAL DO PAINEL (Tabela Resumo | Gráfico de Barras | Promo Card)
-   ========================================================================== */
+/* Linha Central de 3 Colunas */
 .dashboard-middle-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1.85fr 0.95fr;
+  grid-template-columns: 1fr 1.85fr 0.95fr;
   gap: 18px;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   align-items: stretch;
 }
 
@@ -454,10 +428,9 @@ body {
   border-radius: 4px;
   border: 1px solid #e5e7eb;
   padding: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* Mini tabela estilo "Cliente | Total | VENDA" */
 .mini-status-table {
   width: 100%;
   border-collapse: collapse;
@@ -466,14 +439,14 @@ body {
 
 .mini-status-table th {
   text-align: left;
-  color: #6b7280;
-  font-weight: 500;
-  padding: 6px 6px 10px;
+  color: #4b5563;
+  font-weight: 400;
+  padding: 4px 6px 10px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .mini-status-table td {
-  padding: 9px 6px;
+  padding: 8px 6px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
@@ -508,7 +481,7 @@ body {
   text-transform: uppercase;
 }
 
-/* Gráfico de Barras Estilo 3D Azul-Claro igual ao vendas_1.jpg */
+/* Gráfico de Barras 3D */
 .chart-card {
   display: flex;
   flex-direction: column;
@@ -520,15 +493,15 @@ body {
   font-size: 16px;
   font-weight: 400;
   color: #374151;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .bar-chart-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
-  min-height: 210px;
+  min-height: 215px;
 }
 
 .y-axis-label {
@@ -536,12 +509,27 @@ body {
   transform: rotate(180deg);
   font-size: 11.5px;
   color: #6b7280;
-  text-align: center;
+}
+
+.bar-chart-grid {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  height: 200px;
+}
+
+.y-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-right: 8px;
+  font-size: 10.5px;
+  color: #6b7280;
+  text-align: right;
 }
 
 .bar-chart-area {
   flex: 1;
-  height: 200px;
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
@@ -549,10 +537,10 @@ body {
   padding: 20px 10px 0;
   background: repeating-linear-gradient(
     to bottom,
-    #f8fafc 0px,
-    #f8fafc 1px,
+    #f3f4f6 0px,
+    #f3f4f6 1px,
     transparent 1px,
-    transparent 38px
+    transparent 44px
   );
 }
 
@@ -561,7 +549,7 @@ body {
   flex-direction: column;
   align-items: center;
   width: 16%;
-  max-width: 72px;
+  max-width: 68px;
 }
 
 .chart-bar-val {
@@ -573,11 +561,10 @@ body {
 
 .chart-bar-3d {
   width: 100%;
-  background: linear-gradient(180deg, #bce3ff 0%, #a6d8ff 100%);
+  background: linear-gradient(180deg, #bbe2ff 0%, #a8d8ff 100%);
   border-top: 4px solid #d8efff;
   border-right: 5px solid #8ec5f0;
   border-radius: 2px 2px 0 0;
-  transition: height 0.3s ease;
   min-height: 8px;
 }
 
@@ -586,27 +573,23 @@ body {
   font-size: 11px;
   color: #4b5563;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 90px;
 }
 
 .x-axis-title {
   text-align: center;
   font-size: 12px;
   color: #4b5563;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
-/* Card Direito "Precisando registrar saída rápida?" */
+/* Card Direito */
 .promo-action-card {
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 18px;
+  padding: 22px 18px;
 }
 
 .promo-action-card h4 {
@@ -616,25 +599,13 @@ body {
   margin-bottom: 14px;
 }
 
-.promo-illustration {
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  background: #e0f4ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-  border: 2px solid #bae6fd;
-}
-
-.promo-dollar {
-  font-size: 44px;
+.promo-svg-wrap {
+  margin: 8px 0 14px;
 }
 
 .promo-action-card h5 {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 400;
   color: #6b7280;
   margin-bottom: 6px;
 }
@@ -644,9 +615,7 @@ body {
   color: #6b7280;
 }
 
-/* ==========================================================================
-   CARDS COM ABAS FLUTUANTES SUPERIORES (Vermelha e Azul igual ao vendas_1.jpg)
-   ========================================================================== */
+/* Abas Flutuantes Inferiores */
 .floating-tabs-grid, .two-col-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
@@ -667,26 +636,18 @@ body {
   padding: 9px 18px;
   color: #ffffff;
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 400;
   border-radius: 4px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
-.tab-header-red {
-  background-color: var(--red-tab);
-}
-
-.tab-header-blue {
-  background-color: var(--blue-tab);
-}
+.tab-header-red { background-color: var(--red-tab); }
+.tab-header-blue { background-color: var(--blue-tab); }
 
 .floating-tab-card {
   padding-top: 26px;
 }
 
-/* ==========================================================================
-   ALERTAS, FORMULÁRIOS, BOTÕES E TABELAS
-   ========================================================================== */
 .card-subtitle {
   font-size: 12px;
   color: var(--muted);
@@ -790,7 +751,7 @@ select {
   background: var(--blue-tab);
   color: #fff;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   padding: 2px 8px;
   border-radius: 3px;
   margin-bottom: 6px;
@@ -839,7 +800,6 @@ select {
   width: 100%;
 }
 
-/* Badges */
 .badge {
   display: inline-block;
   padding: 2px 7px;
@@ -855,7 +815,6 @@ select {
 .badge-danger { background: var(--tile-red); color: #fff; }
 .badge-neutral { background: #e2e8f0; color: #334155; }
 
-/* Tabelas de Dados */
 .table-responsive {
   overflow-x: auto;
 }
@@ -876,7 +835,7 @@ select {
 
 .data-table th {
   background: #f8fafc;
-  font-weight: 700;
+  font-weight: 600;
   color: #475569;
 }
 
@@ -899,7 +858,6 @@ select {
   gap: 8px;
 }
 
-/* Toast */
 .toast {
   margin: 12px 22px 0;
   padding: 11px 16px;
@@ -911,56 +869,26 @@ select {
 .toast-error { background: #fee2e2; color: #7f1d1d; border-left: 4px solid var(--tile-red); }
 .toast-warning { background: #fef3c7; color: #78350f; border-left: 4px solid var(--tile-orange); }
 
-/* Barra Flutuante "Online" no canto inferior direito igual ao vendas_1.jpg */
+/* Aba flutuante "Online" no rodapé direito */
 .online-status-bar {
   position: fixed;
   bottom: 0;
   right: 22px;
-  width: 210px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  width: 205px;
+  background: #e9ecef;
+  border: 1px solid #d1d5db;
   border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  padding: 7px 14px;
+  border-radius: 5px 5px 0 0;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: var(--tile-green);
-  font-weight: 600;
-  font-size: 12.5px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+  font-size: 13px;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   z-index: 50;
-}
-
-.online-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: var(--tile-green);
-  border-radius: 50%;
-  margin-right: 5px;
-}
-
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--blue-tab);
-  border-radius: 4px;
-  padding: 14px 16px;
-}
-
-.kpi-card strong {
-  display: block;
-  font-size: 22px;
-  margin-top: 4px;
 }
 
 .alert-box { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-weight: 600; }
@@ -970,4 +898,3 @@ select {
 .mt-12 { margin-top: 12px; }
 .max-w-600 { max-width: 640px; }
 .muted { color: var(--muted); }
-.demo-ct-box { margin-top: 22px; border-left: 4px solid var(--blue-tab); }

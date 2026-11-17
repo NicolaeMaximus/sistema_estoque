@@ -1,203 +1,158 @@
-/**
- * ============================================================================
- * ECOT11A - LABORATÓRIO DE ENGENHARIA DE SOFTWARE (UNIFEI)
- * Projeto: Sistema de Controle de Estoque da Mercearia
- * Autor: Nicolae Lopes - Matrícula: 2024014650
- * Prof.: Edvard
- * ----------------------------------------------------------------------------
- * Módulo: Camada de Dados (src/database/db.js)
- * Tarefas Relacionadas:
- *   - T01: Ambiente, repositório Git e banco de dados
- *   - T02: Modelagem física do BD (Usuario, Produto, Lote, Movimentacao, Alerta)
- *   - T14: Ciclo de vida do lote (Disponivel, EstoqueBaixo, VencimentoProximo, Esgotado, Vencido)
- * Requisitos Atendidos:
- *   - RNF02: Senhas salvas com hash criptográfico (SHA-256 / scrypt via módulo crypto)
- *   - RNF03: Transações ACID no banco relacional SQLite (arquivo local estoque.db)
- * ============================================================================
- */
-
+// Banco de dados SQLite e funções auxiliares de estoque e validade
 const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
-// Caminho do arquivo de banco de dados local conforme especificado na Seção 9 do Documento
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', '..', 'estoque.db');
-
-// Instância única de conexão com o banco SQLite
 const db = new DatabaseSync(DB_PATH);
 
-// Habilita chaves estrangeiras e modo WAL para melhor desempenho (< 500ms - RNF01) e integridade ACID (RNF03)
 db.exec('PRAGMA foreign_keys = ON;');
 db.exec('PRAGMA journal_mode = WAL;');
 
-/**
- * Gera um hash criptográfico seguro para a senha utilizando PBKDF2/scrypt + SHA-256 (RNF02).
- * @param {string} senha - Senha em texto plano
- * @returns {string} Hash formatado no padrão "salt:hash"
- */
+// Gera hash da senha usando scrypt + SHA-256 (módulo nativo crypto)
 function gerarHashSenha(senha) {
-  const salt = 'mercearia_ecot11a_salt_2026';
-  const hash = crypto.scryptSync(String(senha), salt, 32).toString('hex');
-  const sha256 = crypto.createHash('sha256').update(hash).digest('hex');
-  return `scrypt_sha256$${sha256}`;
+  const salt = 'mercearia_ecot11a_salt';
+  const derivado = crypto.scryptSync(String(senha), salt, 32);
+  const hash = crypto.createHash('sha256').update(derivado).digest('hex');
+  return `scrypt_sha256$${hash}`;
 }
 
-/**
- * Verifica se a senha fornecida corresponde ao hash salvo no banco (RNF02).
- * @param {string} senha - Senha informada no login
- * @param {string} senhaHash - Hash armazenado no banco de dados
- * @returns {boolean}
- */
 function verificarSenha(senha, senhaHash) {
-  return gerarHashSenha(senha) === senhaHash;
+  if (!senhaHash) return false;
+  const calculado = Buffer.from(gerarHashSenha(senha));
+  const armazenado = Buffer.from(String(senhaHash));
+  if (calculado.length !== armazenado.length) return false;
+  return crypto.timingSafeEqual(calculado, armazenado);
 }
 
-/**
- * Calcula a diferença em dias entre a data de validade do lote e a data de hoje.
- * @param {string} dataValidade - Data no formato YYYY-MM-DD
- * @returns {number} Dias restantes (negativo se já estiver vencido)
- */
+// Retorna quantos dias faltam para a data de validade (negativo se já venceu)
 function calcularDiasParaVencimento(dataValidade) {
   if (!dataValidade) return Infinity;
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  const [ano, mes, dia] = dataValidade.split('-').map(Number);
-  const validade = new Date(ano, mes - 1, dia);
+
+  const partes = String(dataValidade).split('-').map(Number);
+  if (partes.length !== 3) return Infinity;
+
+  const validade = new Date(partes[0], partes[1] - 1, partes[2]);
   validade.setHours(0, 0, 0, 0);
-  const diffMs = validade.getTime() - hoje.getTime();
-  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  return Math.round((validade.getTime() - hoje.getTime()) / 86400000);
 }
 
-/**
- * Determina o estado atual de um lote segundo o Diagrama de Estados (Seção 6.4 - T14):
- * Estados possíveis:
- *   - 'Esgotado'          (quantidadeAtual == 0)
- *   - 'Vencido'           (perecível e diasParaVencer < 0 e quantidadeAtual > 0)
- *   - 'VencimentoProximo' (perecível e 0 <= diasParaVencer <= 7 e quantidadeAtual > 0)
- *   - 'EstoqueBaixo'      (0 < quantidadeAtual <= estoqueMinimo)
- *   - 'Disponivel'        (quantidadeAtual > estoqueMinimo e longe do vencimento)
- *
- * @param {object} lote - Dados do lote ({ quantidadeAtual, dataValidade })
- * @param {object} produto - Dados do produto ({ perecivel, estoqueMinimo })
- * @returns {string} Estado calculado do lote
- */
+// Define o estado do lote conforme o ciclo de vida (Disponivel, EstoqueBaixo, VencimentoProximo, Esgotado, Vencido)
 function calcularEstadoLote(lote, produto) {
   const qtd = Number(lote.quantidadeAtual || 0);
-  if (qtd <= 0) {
-    return 'Esgotado';
-  }
+  if (qtd <= 0) return 'Esgotado';
 
   if (produto && Number(produto.perecivel) === 1 && lote.dataValidade) {
     const dias = calcularDiasParaVencimento(lote.dataValidade);
-    if (dias < 0) {
-      return 'Vencido';
-    }
-    if (dias <= 7) {
-      return 'VencimentoProximo';
-    }
+    if (dias < 0) return 'Vencido';
+    if (dias <= 7) return 'VencimentoProximo';
   }
 
   const min = produto ? Number(produto.estoqueMinimo || 0) : 0;
-  if (qtd <= min) {
-    return 'EstoqueBaixo';
-  }
+  if (qtd <= min) return 'EstoqueBaixo';
 
   return 'Disponivel';
 }
 
-/**
- * Atualiza o estado de todos os lotes e sincroniza a tabela de Alertas (RF07, RN-II, RN-III, T14, T15).
- * Garante que os alertas exibidos no login e após movimentações reflitam fielmente o estoque atual.
- */
+// Atualiza estados dos lotes e recria os alertas ativos em uma única transação
 function sincronizarEstadosEAlertas() {
   const produtos = db.prepare('SELECT * FROM Produto').all();
   const lotes = db.prepare('SELECT * FROM Lote').all();
-
   const mapaProdutos = new Map(produtos.map((p) => [p.id, p]));
 
-  // 1. Atualiza o estado de cada lote individualmente conforme a máquina de estados (T14)
-  const stmtUpdateLote = db.prepare('UPDATE Lote SET estado = ? WHERE id = ?');
-  for (const lote of lotes) {
-    // Se o lote já foi baixado como 'Removido' pelo Administrador após vencimento, preserva se qtd == 0
-    if (lote.estado === 'Removido' && Number(lote.quantidadeAtual) === 0) {
-      continue;
+  const lotesPorProduto = new Map();
+  for (const l of lotes) {
+    if (!lotesPorProduto.has(l.produtoId)) {
+      lotesPorProduto.set(l.produtoId, []);
     }
-    const prod = mapaProdutos.get(lote.produtoId);
-    const novoEstado = calcularEstadoLote(lote, prod);
-    if (novoEstado !== lote.estado) {
-      stmtUpdateLote.run(novoEstado, lote.id);
-    }
+    lotesPorProduto.get(l.produtoId).push(l);
   }
 
-  // 2. Recalcula os alertas ativos (RF07 - separando Estoque Baixo e Validade)
-  db.exec('DELETE FROM Alerta WHERE resolvido = 0;');
-  const stmtInsertAlerta = db.prepare(`
-    INSERT INTO Alerta (produtoId, loteId, tipo, mensagem, dataGeracao, resolvido)
-    VALUES (?, ?, ?, ?, datetime('now', 'localtime'), 0)
-  `);
+  const deveIniciarTransacao = !db.isTransaction;
+  if (deveIniciarTransacao) db.exec('BEGIN TRANSACTION;');
 
-  // 2a. Alertas de Estoque Baixo por Produto (RN-II: saldo disponível <= estoqueMinimo)
-  for (const prod of produtos) {
-    const lotesDoProd = db
-      .prepare('SELECT * FROM Lote WHERE produtoId = ? AND quantidadeAtual > 0')
-      .all(prod.id);
+  try {
+    const stmtUpdateLote = db.prepare('UPDATE Lote SET estado = ? WHERE id = ?');
 
-    // Somamos apenas lotes não vencidos como saldo disponível para venda/reposição normal
-    let saldoDisponivel = 0;
-    for (const l of lotesDoProd) {
-      const estado = calcularEstadoLote(l, prod);
-      if (estado !== 'Vencido') {
-        saldoDisponivel += Number(l.quantidadeAtual);
+    for (const lote of lotes) {
+      if (lote.estado === 'Removido' && Number(lote.quantidadeAtual) === 0) {
+        continue;
+      }
+      const prod = mapaProdutos.get(lote.produtoId);
+      const novoEstado = calcularEstadoLote(lote, prod);
+      if (novoEstado !== lote.estado) {
+        stmtUpdateLote.run(novoEstado, lote.id);
+        lote.estado = novoEstado;
       }
     }
 
-    if (saldoDisponivel <= Number(prod.estoqueMinimo)) {
-      const msg =
-        saldoDisponivel === 0
-          ? `Estoque ESGOTADO para "${prod.nome}" (Mínimo exigido: ${prod.estoqueMinimo} ${prod.unidadeMedida}).`
-          : `Estoque baixo para "${prod.nome}": restam ${saldoDisponivel} ${prod.unidadeMedida} (Mínimo: ${prod.estoqueMinimo} ${prod.unidadeMedida}).`;
-      stmtInsertAlerta.run(prod.id, null, 'Estoque', msg);
-    }
-  }
+    db.exec('DELETE FROM Alerta WHERE resolvido = 0;');
+    const stmtInsertAlerta = db.prepare(`
+      INSERT INTO Alerta (produtoId, loteId, tipo, mensagem, dataGeracao, resolvido)
+      VALUES (?, ?, ?, ?, datetime('now', 'localtime'), 0)
+    `);
 
-  // 2b. Alertas de Validade Próxima ou Lote Vencido ordenados por FEFO (RN-III, RE-I)
-  const lotesPereciveis = db
-    .prepare(`
-      SELECT l.*, p.nome AS produtoNome, p.unidadeMedida, p.perecivel, p.estoqueMinimo
-      FROM Lote l
-      JOIN Produto p ON p.id = l.produtoId
-      WHERE p.perecivel = 1 AND l.quantidadeAtual > 0
-      ORDER BY l.dataValidade ASC
-    `)
-    .all();
+    // Alertas de estoque baixo por produto
+    for (const prod of produtos) {
+      const lista = lotesPorProduto.get(prod.id) || [];
+      let saldoDisponivel = 0;
 
-  for (const l of lotesPereciveis) {
-    const dias = calcularDiasParaVencimento(l.dataValidade);
-    if (dias < 0) {
-      stmtInsertAlerta.run(
-        l.produtoId,
-        l.id,
-        'Validade',
-        `LOTE VENCIDO [${l.codigoLote}] de "${l.produtoNome}" (${l.quantidadeAtual} ${l.unidadeMedida}) - venceu em ${l.dataValidade}. Saída bloqueada (RE-I).`
-      );
-    } else if (dias <= 7) {
-      stmtInsertAlerta.run(
-        l.produtoId,
-        l.id,
-        'Validade',
-        `Vencimento próximo (${dias === 0 ? 'VENCE HOJE' : `em ${dias} dia(s)`}): Lote [${l.codigoLote}] de "${l.produtoNome}" (${l.quantidadeAtual} ${l.unidadeMedida}) vence em ${l.dataValidade}.`
-      );
+      for (const l of lista) {
+        if (Number(l.quantidadeAtual) > 0 && l.estado !== 'Vencido') {
+          saldoDisponivel += Number(l.quantidadeAtual);
+        }
+      }
+
+      if (saldoDisponivel <= Number(prod.estoqueMinimo)) {
+        const msg =
+          saldoDisponivel === 0
+            ? `Sem estoque disponível para "${prod.nome}" (mínimo: ${prod.estoqueMinimo} ${prod.unidadeMedida}).`
+            : `Saldo baixo para "${prod.nome}": ${saldoDisponivel} ${prod.unidadeMedida} disponíveis (mínimo: ${prod.estoqueMinimo} ${prod.unidadeMedida}).`;
+        stmtInsertAlerta.run(prod.id, null, 'Estoque', msg);
+      }
     }
+
+    // Alertas de validade próxima ou vencida (ordenados por FEFO)
+    const lotesPereciveis = lotes
+      .filter((l) => {
+        const p = mapaProdutos.get(l.produtoId);
+        return p && Number(p.perecivel) === 1 && Number(l.quantidadeAtual) > 0 && l.dataValidade;
+      })
+      .sort((a, b) => String(a.dataValidade).localeCompare(String(b.dataValidade)));
+
+    for (const l of lotesPereciveis) {
+      const prod = mapaProdutos.get(l.produtoId);
+      const dias = calcularDiasParaVencimento(l.dataValidade);
+
+      if (dias < 0) {
+        stmtInsertAlerta.run(
+          l.produtoId,
+          l.id,
+          'Validade',
+          `Lote vencido [${l.codigoLote}] de "${prod.nome}" (${l.quantidadeAtual} ${prod.unidadeMedida}) — venceu em ${l.dataValidade}.`
+        );
+      } else if (dias <= 7) {
+        stmtInsertAlerta.run(
+          l.produtoId,
+          l.id,
+          'Validade',
+          `Vence ${dias === 0 ? 'hoje' : `em ${dias} dia(s)`}: Lote [${l.codigoLote}] de "${prod.nome}" (${l.quantidadeAtual} ${prod.unidadeMedida}) — validade ${l.dataValidade}.`
+        );
+      }
+    }
+
+    if (deveIniciarTransacao) db.exec('COMMIT;');
+  } catch (err) {
+    if (deveIniciarTransacao && db.isTransaction) db.exec('ROLLBACK;');
+    throw err;
   }
 }
 
-/**
- * Inicializa as tabelas do banco de dados seguindo estritamente o Diagrama de Classes (Seção 6.2)
- * e insere dados iniciais (seed) caso o banco esteja vazio.
- */
 function inicializarBanco() {
   db.exec(`
-    -- Tabela Usuario (Seção 6.2 - Diagrama de Classes)
     CREATE TABLE IF NOT EXISTS Usuario (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
@@ -206,7 +161,6 @@ function inicializarBanco() {
       perfil TEXT NOT NULL CHECK (perfil IN ('Administrador', 'Funcionario'))
     );
 
-    -- Tabela Produto (Seção 6.2 - Diagrama de Classes)
     CREATE TABLE IF NOT EXISTS Produto (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
@@ -228,7 +182,6 @@ function inicializarBanco() {
       estoqueMinimo REAL NOT NULL DEFAULT 0 CHECK (estoqueMinimo >= 0)
     );
 
-    -- Tabela Lote (Seção 6.2 e 6.4 - Diagrama de Classes e Estados)
     CREATE TABLE IF NOT EXISTS Lote (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produtoId INTEGER NOT NULL,
@@ -240,7 +193,6 @@ function inicializarBanco() {
       FOREIGN KEY (produtoId) REFERENCES Produto(id) ON DELETE CASCADE
     );
 
-    -- Tabela Movimentacao (Seção 6.2 - Entrada, Saida, Perda vinculada ao Usuario - RN-IV)
     CREATE TABLE IF NOT EXISTS Movimentacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produtoId INTEGER NOT NULL,
@@ -255,7 +207,6 @@ function inicializarBanco() {
       FOREIGN KEY (usuarioId) REFERENCES Usuario(id)
     );
 
-    -- Tabela Alerta (Seção 6.2 - Alertas de Estoque Baixo e Validade)
     CREATE TABLE IF NOT EXISTS Alerta (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produtoId INTEGER,
@@ -267,9 +218,12 @@ function inicializarBanco() {
       FOREIGN KEY (produtoId) REFERENCES Produto(id) ON DELETE CASCADE,
       FOREIGN KEY (loteId) REFERENCES Lote(id) ON DELETE CASCADE
     );
+
+    CREATE INDEX IF NOT EXISTS idx_lote_produto ON Lote(produtoId, dataValidade);
+    CREATE INDEX IF NOT EXISTS idx_mov_produto ON Movimentacao(produtoId, tipo);
+    CREATE INDEX IF NOT EXISTS idx_mov_usuario ON Movimentacao(usuarioId);
   `);
 
-  // Verifica se já existem usuários cadastrados; se não, popula o seed inicial para demonstração
   const totalUsuarios = db.prepare('SELECT COUNT(*) AS total FROM Usuario').get().total;
   if (totalUsuarios === 0) {
     popularDadosIniciais();
@@ -278,15 +232,11 @@ function inicializarBanco() {
   }
 }
 
-/**
- * Insere dados iniciais realistas da Mercearia para permitir teste imediato de todos os requisitos
- * (RF01 a RF08, RN-I a RN-IV, RE-I, RE-II e casos de teste CT01 a CT05).
- */
 function popularDadosIniciais() {
   const hoje = new Date();
-  const formatarData = (offsetDias) => {
+  const dataOffset = (dias) => {
     const d = new Date(hoje);
-    d.setDate(d.getDate() + offsetDias);
+    d.setDate(d.getDate() + dias);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -295,67 +245,45 @@ function popularDadosIniciais() {
 
   db.exec('BEGIN TRANSACTION;');
   try {
-    // 1. Perfis de Usuário (Lab 1: O dono Administrador e os 2 funcionários do caixa e da reposição)
     const stmtUser = db.prepare(
       'INSERT INTO Usuario (nome, login, senhaHash, perfil) VALUES (?, ?, ?, ?)'
     );
-    const adminInfo = stmtUser.run(
-      'Nicolae Lopes (Proprietário)',
-      'admin',
-      gerarHashSenha('admin123'),
-      'Administrador'
+    const adminId = Number(
+      stmtUser.run('Nicolae Lopes', 'admin', gerarHashSenha('admin123'), 'Administrador')
+        .lastInsertRowid
     );
-    const func1Info = stmtUser.run(
-      'Carlos Silva (Caixa)',
-      'carlos',
-      gerarHashSenha('func123'),
-      'Funcionario'
+    const func1Id = Number(
+      stmtUser.run('Carlos Silva (Caixa)', 'carlos', gerarHashSenha('func123'), 'Funcionario')
+        .lastInsertRowid
     );
-    stmtUser.run(
-      'Mariana Souza (Reposição)',
-      'mariana',
-      gerarHashSenha('func123'),
-      'Funcionario'
-    );
+    stmtUser.run('Mariana Souza (Reposição)', 'mariana', gerarHashSenha('func123'), 'Funcionario');
 
-    const adminId = Number(adminInfo.lastInsertRowid);
-    const func1Id = Number(func1Info.lastInsertRowid);
-
-    // 2. Produtos nas 5 categorias especificadas no Documento de Requisitos (Seção 4)
     const stmtProd = db.prepare(`
       INSERT INTO Produto (nome, categoria, unidadeMedida, precoVenda, perecivel, estoqueMinimo)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // P1: Mercearia Seca
     const pArroz = Number(
-      stmtProd.run('Arroz Tipo 1 - Pacote 5kg', 'Mercearia Seca', 'unidade', 28.9, 0, 10)
-        .lastInsertRowid
+      stmtProd.run('Arroz Tipo 1 - 5kg', 'Mercearia Seca', 'unidade', 28.9, 0, 10).lastInsertRowid
     );
-    // P2: Laticínios e Frios (Perecível - com 2 lotes para demonstrar FEFO RN-III e CT03)
     const pLeite = Number(
       stmtProd.run('Leite Integral 1L', 'Laticínios e Frios', 'litro', 5.49, 1, 15).lastInsertRowid
     );
-    // P3: Laticínios e Frios (Perecível - com lote vencido para demonstrar RE-I e CT04)
     const pIogurte = Number(
       stmtProd.run('Iogurte Natural 170g', 'Laticínios e Frios', 'unidade', 3.99, 1, 8)
         .lastInsertRowid
     );
-    // P4: Hortifrúti (Perecível - com estoque baixo para demonstrar RN-II e CT05)
     const pTomate = Number(
       stmtProd.run('Tomate Italiano', 'Hortifrúti', 'quilo', 8.9, 1, 12).lastInsertRowid
     );
-    // P5: Bebidas (Perecível)
     const pSuco = Number(
       stmtProd.run('Suco de Laranja Integral 1L', 'Bebidas', 'litro', 11.5, 1, 6).lastInsertRowid
     );
-    // P6: Limpeza e Higiene (Não perecível - Produto parado para relatório RF08/T19)
     const pDetergente = Number(
       stmtProd.run('Detergente Neutro 500ml', 'Limpeza e Higiene', 'unidade', 2.79, 0, 10)
         .lastInsertRowid
     );
 
-    // 3. Lotes e Movimentações Iniciais
     const stmtLote = db.prepare(`
       INSERT INTO Lote (produtoId, codigoLote, quantidadeAtual, dataEntrada, dataValidade, estado)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -365,76 +293,63 @@ function popularDadosIniciais() {
       VALUES (?, ?, ?, ?, datetime('now', 'localtime'), ?, ?)
     `);
 
-    // Lote de Arroz (Disponível)
     const lArroz = Number(
-      stmtLote.run(pArroz, 'LOTE-ARR-001', 25, formatarData(-15), formatarData(180), 'Disponivel')
+      stmtLote.run(pArroz, 'LOTE-ARR-001', 25, dataOffset(-15), dataOffset(180), 'Disponivel')
         .lastInsertRowid
     );
-    stmtMov.run(pArroz, lArroz, 'Entrada', 30, adminId, 'Entrega inicial do fornecedor');
-    stmtMov.run(pArroz, lArroz, 'Saida', 5, func1Id, 'Venda no balcão');
+    stmtMov.run(pArroz, lArroz, 'Entrada', 30, adminId, 'Entrega fornecedor');
+    stmtMov.run(pArroz, lArroz, 'Saida', 5, func1Id, 'Venda balcão');
 
-    // Dois lotes de Leite Integral com validades diferentes (para demonstrar FEFO - RN-III / CT03)
-    const lLeiteMaisDistante = Number(
-      stmtLote.run(pLeite, 'LOTE-LEI-102', 20, formatarData(-2), formatarData(25), 'Disponivel')
+    // Dois lotes de Leite para demonstrar ordenação FEFO
+    const lLeite2 = Number(
+      stmtLote.run(pLeite, 'LOTE-LEI-102', 20, dataOffset(-2), dataOffset(25), 'Disponivel')
         .lastInsertRowid
     );
-    const lLeiteMaisProximo = Number(
-      stmtLote.run(
-        pLeite,
-        'LOTE-LEI-101',
-        12,
-        formatarData(-10),
-        formatarData(4),
-        'VencimentoProximo'
-      ).lastInsertRowid
+    const lLeite1 = Number(
+      stmtLote.run(pLeite, 'LOTE-LEI-101', 12, dataOffset(-10), dataOffset(4), 'VencimentoProximo')
+        .lastInsertRowid
     );
-    stmtMov.run(pLeite, lLeiteMaisDistante, 'Entrada', 20, adminId, 'Remessa nova Laticínios');
-    stmtMov.run(pLeite, lLeiteMaisProximo, 'Entrada', 18, adminId, 'Remessa anterior Laticínios');
-    stmtMov.run(pLeite, lLeiteMaisProximo, 'Saida', 6, func1Id, 'Reposição de geladeira (FEFO)');
+    stmtMov.run(pLeite, lLeite2, 'Entrada', 20, adminId, 'Remessa nova laticínios');
+    stmtMov.run(pLeite, lLeite1, 'Entrada', 18, adminId, 'Remessa anterior laticínios');
+    stmtMov.run(pLeite, lLeite1, 'Saida', 6, func1Id, 'Reposição geladeira');
 
-    // Lote de Iogurte VENCIDO (para demonstrar bloqueio RE-I / T16 / CT04) + 1 lote válido
-    const lIogVencido = Number(
-      stmtLote.run(pIogurte, 'LOTE-IOG-090', 5, formatarData(-20), formatarData(-2), 'Vencido')
+    // Iogurte com 1 lote vencido e 1 lote válido
+    const lIogVenc = Number(
+      stmtLote.run(pIogurte, 'LOTE-IOG-090', 5, dataOffset(-20), dataOffset(-2), 'Vencido')
         .lastInsertRowid
     );
-    const lIogValido = Number(
-      stmtLote.run(pIogurte, 'LOTE-IOG-095', 14, formatarData(-1), formatarData(18), 'Disponivel')
+    const lIogVal = Number(
+      stmtLote.run(pIogurte, 'LOTE-IOG-095', 14, dataOffset(-1), dataOffset(18), 'Disponivel')
         .lastInsertRowid
     );
-    stmtMov.run(pIogurte, lIogVencido, 'Entrada', 5, adminId, 'Lote antigo para teste de bloqueio');
-    stmtMov.run(pIogurte, lIogValido, 'Entrada', 14, adminId, 'Lote novo de iogurte');
+    stmtMov.run(pIogurte, lIogVenc, 'Entrada', 5, adminId, 'Lote antigo');
+    stmtMov.run(pIogurte, lIogVal, 'Entrada', 14, adminId, 'Lote novo');
 
-    // Lote de Tomate com Estoque Baixo (qtd 8 <= min 12 - RN-II)
+    // Tomate abaixo do estoque mínimo
     const lTomate = Number(
-      stmtLote.run(pTomate, 'LOTE-TOM-010', 8, formatarData(-3), formatarData(5), 'EstoqueBaixo')
+      stmtLote.run(pTomate, 'LOTE-TOM-010', 8, dataOffset(-3), dataOffset(5), 'EstoqueBaixo')
         .lastInsertRowid
     );
     stmtMov.run(pTomate, lTomate, 'Entrada', 15, adminId, 'Feira semanal');
     stmtMov.run(pTomate, lTomate, 'Saida', 7, func1Id, 'Vendas hortifrúti');
 
-    // Lote de Suco (Disponível)
+    // Suco disponível
     const lSuco = Number(
-      stmtLote.run(pSuco, 'LOTE-SUC-050', 15, formatarData(-5), formatarData(40), 'Disponivel')
+      stmtLote.run(pSuco, 'LOTE-SUC-050', 15, dataOffset(-5), dataOffset(40), 'Disponivel')
         .lastInsertRowid
     );
     stmtMov.run(pSuco, lSuco, 'Entrada', 15, adminId, 'Entrada bebidas');
 
-    // Lote de Detergente (Sem saídas -> aparece como "Produto Parado" no relatório RF08/T19)
+    // Detergente sem saídas (produto parado)
     const lDetergente = Number(
-      stmtLote.run(
-        pDetergente,
-        'LOTE-DET-001',
-        30,
-        formatarData(-30),
-        formatarData(365),
-        'Disponivel'
-      ).lastInsertRowid
+      stmtLote.run(pDetergente, 'LOTE-DET-001', 30, dataOffset(-30), dataOffset(365), 'Disponivel')
+        .lastInsertRowid
     );
     stmtMov.run(pDetergente, lDetergente, 'Entrada', 30, adminId, 'Estoque inicial limpeza');
 
     db.exec('COMMIT;');
   } catch (err) {
-    db.exec('ROLLBACK;');
+    if (db.isTransaction) db.exec('ROLLBACK;');
     throw err;
   }
 

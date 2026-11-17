@@ -1,22 +1,4 @@
-/**
- * ============================================================================
- * ECOT11A - LABORATÓRIO DE ENGENHARIA DE SOFTWARE (UNIFEI)
- * Projeto: Sistema de Controle de Estoque da Mercearia
- * Autor: Nicolae Lopes - Matrícula: 2024014650
- * ----------------------------------------------------------------------------
- * Módulo: Controlador de Autenticação e Usuários (src/controllers/authController.js)
- * Tarefas Relacionadas:
- *   - T03: Autenticação e perfis (Administrador/Funcionário)
- *   - T04: Cadastro de funcionários (somente administrador)
- *   - T15: Aviso de vencimento próximo e estoque baixo no login
- * Requisitos Atendidos:
- *   - RF01: Login e controle de perfil
- *   - RF02: Cadastro e gerenciamento de contas de funcionários
- *   - RNF02: Hash de senha com SHA-256/scrypt e bloqueio HTTP 403
- *   - RNF04: Exibição separada dos alertas logo após o login
- * ============================================================================
- */
-
+// Autenticação de usuários e gerenciamento de funcionários
 const {
   db,
   gerarHashSenha,
@@ -25,16 +7,12 @@ const {
 } = require('../database/db');
 const { criarSessao, encerrarSessao } = require('../middleware/authMiddleware');
 
-/**
- * Realiza o login do usuário (Método Usuario.autenticar() do Diagrama de Classes - Seção 6.2).
- * Rota: POST /api/auth/login
- */
 function login(req, res) {
   const { login: userLogin, senha } = req.body || {};
 
   if (!userLogin || !senha) {
     return res.status(400).json({
-      erro: 'Informe o login e a senha para entrar no sistema.',
+      erro: 'Informe o usuário e a senha.',
     });
   }
 
@@ -44,11 +22,10 @@ function login(req, res) {
 
   if (!usuario || !verificarSenha(senha, usuario.senhaHash)) {
     return res.status(401).json({
-      erro: 'Credenciais inválidas. Verifique seu usuário e senha.',
+      erro: 'Usuário ou senha incorretos.',
     });
   }
 
-  // Sincroniza os estados dos lotes e gera os alertas atualizados no momento do login (T15 / RNF04)
   sincronizarEstadosEAlertas();
 
   const alertasEstoque = db
@@ -76,83 +53,63 @@ function login(req, res) {
   });
 }
 
-/**
- * Realiza o logout da sessão atual.
- * Rota: POST /api/auth/logout
- */
 function logout(req, res) {
   encerrarSessao(req.token);
-  return res.status(200).json({ mensagem: 'Sessão encerrada com sucesso.' });
+  return res.status(200).json({ mensagem: 'Sessão encerrada.' });
 }
 
-/**
- * Retorna os dados do usuário autenticado.
- * Rota: GET /api/auth/me
- */
 function obterPerfilAtual(req, res) {
   return res.status(200).json({ usuario: req.usuario });
 }
 
-/**
- * Lista todos os usuários/funcionários cadastrados (Restrito ao Administrador - RF02).
- * Rota: GET /api/usuarios
- */
 function listarUsuarios(req, res) {
   const usuarios = db
     .prepare(`
       SELECT u.id, u.nome, u.login, u.perfil,
-             (SELECT COUNT(*) FROM Movimentacao m WHERE m.usuarioId = u.id) AS totalMovimentacoes
+             COUNT(m.id) AS totalMovimentacoes
       FROM Usuario u
+      LEFT JOIN Movimentacao m ON m.usuarioId = u.id
+      GROUP BY u.id
       ORDER BY u.perfil ASC, u.nome ASC
     `)
     .all();
   return res.status(200).json(usuarios);
 }
 
-/**
- * Cadastra um novo funcionário ou administrador (Método Usuario.cadastrarFuncionario() - RF02, T04, CT01).
- * Rota: POST /api/usuarios
- */
 function cadastrarUsuario(req, res) {
   const { nome, login: novoLogin, senha, perfil } = req.body || {};
 
   if (!nome || !novoLogin || !senha) {
     return res.status(400).json({
-      erro: 'Nome, login e senha são obrigatórios para cadastrar um funcionário.',
+      erro: 'Preencha nome, login e senha.',
     });
   }
 
   const perfilFinal = perfil === 'Administrador' ? 'Administrador' : 'Funcionario';
+  const loginLimpo = String(novoLogin).trim();
 
-  const existente = db
-    .prepare('SELECT id FROM Usuario WHERE login = ?')
-    .get(String(novoLogin).trim());
+  const existente = db.prepare('SELECT id FROM Usuario WHERE login = ?').get(loginLimpo);
   if (existente) {
     return res.status(409).json({
-      erro: `O login "${novoLogin}" já está em uso por outro usuário.`,
+      erro: `O login "${loginLimpo}" já está cadastrado.`,
     });
   }
 
-  const senhaHash = gerarHashSenha(senha);
   const info = db
     .prepare('INSERT INTO Usuario (nome, login, senhaHash, perfil) VALUES (?, ?, ?, ?)')
-    .run(String(nome).trim(), String(novoLogin).trim(), senhaHash, perfilFinal);
+    .run(String(nome).trim(), loginLimpo, gerarHashSenha(senha), perfilFinal);
 
   return res.status(201).json({
-    mensagem: 'Usuário cadastrado com sucesso.',
+    mensagem: 'Funcionário cadastrado com sucesso.',
     usuario: {
       id: Number(info.lastInsertRowid),
       nome: String(nome).trim(),
-      login: String(novoLogin).trim(),
+      login: loginLimpo,
       perfil: perfilFinal,
     },
   });
 }
 
-/**
- * Atualiza dados ou senha de um usuário/funcionário (RF02).
- * Rota: PUT /api/usuarios/:id
- */
 function atualizarUsuario(req, res) {
   const id = Number(req.params.id);
   const { nome, perfil, novaSenha } = req.body || {};
@@ -175,20 +132,16 @@ function atualizarUsuario(req, res) {
   );
 
   return res.status(200).json({
-    mensagem: 'Dados do usuário atualizados com sucesso.',
+    mensagem: 'Usuário atualizado com sucesso.',
     usuario: { id, nome: novoNome, login: usuario.login, perfil: novoPerfil },
   });
 }
 
-/**
- * Remove uma conta de funcionário caso não seja o próprio administrador logado (RF02).
- * Rota: DELETE /api/usuarios/:id
- */
 function removerUsuario(req, res) {
   const id = Number(req.params.id);
   if (id === req.usuario.id) {
     return res.status(400).json({
-      erro: 'Você não pode excluir a sua própria conta de Administrador em uso.',
+      erro: 'Não é permitido excluir o próprio usuário logado.',
     });
   }
 
@@ -202,7 +155,7 @@ function removerUsuario(req, res) {
     .get(id).total;
   if (movs > 0) {
     return res.status(400).json({
-      erro: 'Não é possível excluir um funcionário que já possui movimentações registradas no histórico (RN-IV).',
+      erro: 'Não é possível excluir um funcionário que já possui movimentações registradas.',
     });
   }
 

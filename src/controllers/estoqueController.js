@@ -1,34 +1,10 @@
-/**
- * ============================================================================
- * ECOT11A - LABORATÓRIO DE ENGENHARIA DE SOFTWARE (UNIFEI)
- * Projeto: Sistema de Controle de Estoque da Mercearia
- * Autor: Nicolae Lopes - Matrícula: 2024014650
- * ----------------------------------------------------------------------------
- * Módulo: Controlador de Estoque, Lotes, Movimentações e Alertas (src/controllers/estoqueController.js)
- * Tarefas Relacionadas:
- *   - T08: Registro de entrada com lote e validade
- *   - T09: Registro de saída com verificação de disponibilidade (RN-I / RS001)
- *   - T10: Exibição e priorização de lotes por validade mais próxima (FEFO - RN-III)
- *   - T11: Vínculo entre movimentação e funcionário, e histórico (RN-IV)
- *   - T12: Estoque mínimo por item e aviso de estoque baixo (RN-II)
- *   - T14: Ciclo de vida do lote (Disponivel, EstoqueBaixo, VencimentoProximo, Esgotado, Vencido, Removido)
- *   - T15: Aviso de vencimento próximo no login e na saída (RN-III)
- *   - T16: Bloqueio de saída de lote vencido e baixa pelo administrador (RE-I)
- *   - T17: Entrada e saída em massa de produtos (RF06)
- * ============================================================================
- */
-
+// Controle de entradas, saídas (FEFO), baixas de perda e operações em massa
 const {
   db,
   calcularDiasParaVencimento,
   sincronizarEstadosEAlertas,
 } = require('../database/db');
 
-/**
- * Registra a entrada de um lote de produto no estoque (RF04, T08, RNF03, RN-IV).
- * Utiliza transação ACID (RNF03) para gravar o Lote e a Movimentacao simultaneamente.
- * Rota: POST /api/estoque/entrada
- */
 function registrarEntrada(req, res) {
   const { produtoId, codigoLote, quantidade, dataValidade, observacao } = req.body || {};
 
@@ -37,7 +13,7 @@ function registrarEntrada(req, res) {
 
   if (!idProd || !codigoLote || Number.isNaN(qtd) || qtd <= 0) {
     return res.status(400).json({
-      erro: 'Informe produtoId válido, código do lote e uma quantidade maior que zero.',
+      erro: 'Informe o produto, código do lote e uma quantidade maior que zero.',
     });
   }
 
@@ -46,25 +22,24 @@ function registrarEntrada(req, res) {
     return res.status(404).json({ erro: 'Produto não encontrado.' });
   }
 
-  // Se o produto é perecível (RE-I), exige data de validade do lote
   if (Number(produto.perecivel) === 1 && (!dataValidade || String(dataValidade).trim() === '')) {
     return res.status(400).json({
-      erro: `O produto "${produto.nome}" é perecível (RE-I). Informe obrigatoriamente a data de validade do lote.`,
+      erro: `O produto "${produto.nome}" é perecível e exige data de validade do lote.`,
     });
   }
 
   const dataEntrada = new Date().toISOString().slice(0, 10);
   const validadeFinal =
     dataValidade && String(dataValidade).trim() !== '' ? String(dataValidade).trim() : null;
+  const codLoteLimpo = String(codigoLote).trim();
 
+  let loteId;
   db.exec('BEGIN TRANSACTION;');
   try {
-    // Verifica se já existe um lote com o mesmo código para este produto
     const loteExistente = db
       .prepare('SELECT * FROM Lote WHERE produtoId = ? AND codigoLote = ?')
-      .get(idProd, String(codigoLote).trim());
+      .get(idProd, codLoteLimpo);
 
-    let loteId;
     if (loteExistente) {
       const novaQtd = Number((Number(loteExistente.quantidadeAtual) + qtd).toFixed(3));
       db.prepare(`
@@ -79,11 +54,10 @@ function registrarEntrada(req, res) {
           INSERT INTO Lote (produtoId, codigoLote, quantidadeAtual, dataEntrada, dataValidade, estado)
           VALUES (?, ?, ?, ?, ?, 'Disponivel')
         `)
-        .run(idProd, String(codigoLote).trim(), qtd, dataEntrada, validadeFinal);
+        .run(idProd, codLoteLimpo, qtd, dataEntrada, validadeFinal);
       loteId = Number(infoLote.lastInsertRowid);
     }
 
-    // Registra a movimentação associada ao usuário logado (RN-IV)
     db.prepare(`
       INSERT INTO Movimentacao (produtoId, loteId, tipo, quantidade, dataHora, usuarioId, observacao)
       VALUES (?, ?, 'Entrada', ?, datetime('now', 'localtime'), ?, ?)
@@ -92,56 +66,41 @@ function registrarEntrada(req, res) {
       loteId,
       qtd,
       req.usuario.id,
-      observacao ? String(observacao).trim() : 'Entrada de mercadoria'
+      observacao ? String(observacao).trim() : 'Entrada de lote'
     );
 
+    sincronizarEstadosEAlertas();
     db.exec('COMMIT;');
   } catch (err) {
-    db.exec('ROLLBACK;');
+    if (db.isTransaction) db.exec('ROLLBACK;');
     return res.status(500).json({
-      erro: 'Falha na transação de entrada no banco de dados (RNF03).',
+      erro: 'Erro ao gravar entrada no banco de dados.',
       detalhe: err.message,
     });
   }
 
-  sincronizarEstadosEAlertas();
-
-  const loteAtualizado = db.prepare('SELECT * FROM Lote WHERE id = ?').get(
-    db
-      .prepare('SELECT id FROM Lote WHERE produtoId = ? AND codigoLote = ?')
-      .get(idProd, String(codigoLote).trim()).id
-  );
+  const loteAtualizado = db.prepare('SELECT * FROM Lote WHERE id = ?').get(loteId);
 
   return res.status(201).json({
-    mensagem: `Entrada de ${qtd} ${produto.unidadeMedida} de "${produto.nome}" (Lote ${codigoLote}) registrada com sucesso.`,
+    mensagem: `Entrada de ${qtd} ${produto.unidadeMedida} de "${produto.nome}" (Lote ${codLoteLimpo}) registrada.`,
     lote: loteAtualizado,
   });
 }
 
-/**
- * Executa a validação e a lógica de negócio do Caso de Uso RS001 (Registro de Saída de Produto).
- * Pode ser chamada isoladamente ou dentro de uma operação em massa (RF06).
- *
- * Regras verificadas:
- *   - RE-I / T16 / CT04: Bloqueia saída comum de lote vencido
- *   - RN-I / RS001 / CT02: Bloqueia saída maior do que o saldo disponível
- *   - RN-III / CT03: Seleciona/prioriza lote por FEFO (validade mais próxima primeiro)
- *   - RN-IV / CT05: Associa a saída ao funcionário logado
- *   - RN-II / CT05: Verifica se o saldo restante atingiu o estoque mínimo e retorna avisos
- */
+// Processa uma saída individual validando saldo (RN-I), validade (RE-I) e priorização FEFO (RN-III)
 function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usuarioId }) {
   const idProd = Number(produtoId);
   const qtd = Number(quantidade);
 
   if (!idProd || Number.isNaN(qtd) || qtd <= 0) {
-    const err = new Error('Informe um produto válido e uma quantidade de saída maior que zero.');
+    const err = new Error('Informe um produto válido e quantidade maior que zero.');
     err.status = 400;
     throw err;
   }
 
   const produto = db.prepare('SELECT * FROM Produto WHERE id = ?').get(idProd);
   if (!produto) {
-    const err = new Error('Produto não encontrado no estoque.');
+    const err = new Error('Produto não encontrado.');
     err.status = 404;
     throw err;
   }
@@ -153,41 +112,44 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
       .prepare('SELECT * FROM Lote WHERE id = ? AND produtoId = ?')
       .get(Number(loteId), idProd);
     if (!loteSelecionado) {
-      const err = new Error('Lote informado não pertence ao produto selecionado.');
+      const err = new Error('Lote não encontrado para este produto.');
       err.status = 404;
       throw err;
     }
   } else {
-    // Seleção automática pelo critério FEFO (First Expired, First Out - RN-III)
+    // Busca automática FEFO: prioriza lotes não vencidos com validade mais próxima
+    const hoje = new Date().toISOString().slice(0, 10);
     loteSelecionado = db
       .prepare(`
         SELECT *
         FROM Lote
         WHERE produtoId = ? AND quantidadeAtual > 0
         ORDER BY
+          CASE WHEN dataValidade IS NOT NULL AND dataValidade < ? THEN 1 ELSE 0 END ASC,
           CASE WHEN dataValidade IS NULL OR dataValidade = '' THEN 1 ELSE 0 END ASC,
           dataValidade ASC,
           id ASC
         LIMIT 1
       `)
-      .get(idProd);
+      .get(idProd, hoje);
 
     if (!loteSelecionado) {
       const err = new Error(
-        `Quantidade indisponível em estoque (RN-I): O produto "${produto.nome}" possui saldo disponível 0 ${produto.unidadeMedida}.`
+        `Quantidade indisponível: "${produto.nome}" está sem saldo em estoque.`
       );
       err.status = 400;
+      err.codigoRegra = 'RN-I';
       err.saldoAtual = 0;
       throw err;
     }
   }
 
-  // Verifica se o lote selecionado está VENCIDO (RE-I, T16, CT04)
+  // Bloqueia saída normal caso o lote esteja vencido (RE-I)
   if (Number(produto.perecivel) === 1 && loteSelecionado.dataValidade) {
     const dias = calcularDiasParaVencimento(loteSelecionado.dataValidade);
     if (dias < 0 || loteSelecionado.estado === 'Vencido') {
       const err = new Error(
-        `Saída bloqueada (RE-I / CT04): O lote [${loteSelecionado.codigoLote}] de "${produto.nome}" está VENCIDO (validade: ${loteSelecionado.dataValidade}). Apenas o Administrador pode realizar a baixa de perda.`
+        `Saída bloqueada: o lote [${loteSelecionado.codigoLote}] de "${produto.nome}" venceu em ${loteSelecionado.dataValidade}. Solicite a baixa de perda ao Administrador.`
       );
       err.status = 400;
       err.codigoRegra = 'RE-I';
@@ -195,11 +157,11 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
     }
   }
 
-  // Verifica disponibilidade de saldo no lote (RN-I, RS001, CT02)
+  // Verifica se há quantidade suficiente no lote (RN-I)
   const saldoNoLote = Number(loteSelecionado.quantidadeAtual);
   if (qtd > saldoNoLote) {
     const err = new Error(
-      `Quantidade indisponível em estoque (RN-I / CT02): Solicitado ${qtd} ${produto.unidadeMedida}, mas o lote [${loteSelecionado.codigoLote}] possui saldo atual de apenas ${saldoNoLote} ${produto.unidadeMedida}.`
+      `Quantidade indisponível: solicitado ${qtd} ${produto.unidadeMedida}, mas o lote [${loteSelecionado.codigoLote}] possui apenas ${saldoNoLote} ${produto.unidadeMedida}.`
     );
     err.status = 400;
     err.codigoRegra = 'RN-I';
@@ -207,14 +169,12 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
     throw err;
   }
 
-  // Debita a quantidade do lote (Método Lote.debitar(qtd) do Diagrama de Sequência - Seção 6.3)
   const novoSaldoLote = Number((saldoNoLote - qtd).toFixed(3));
   db.prepare('UPDATE Lote SET quantidadeAtual = ? WHERE id = ?').run(
     novoSaldoLote,
     loteSelecionado.id
   );
 
-  // Grava a Movimentacao associada ao funcionário que a realizou (RN-IV)
   const infoMov = db
     .prepare(`
       INSERT INTO Movimentacao (produtoId, loteId, tipo, quantidade, dataHora, usuarioId, observacao)
@@ -225,10 +185,10 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
       loteSelecionado.id,
       qtd,
       usuarioId,
-      observacao ? String(observacao).trim() : 'Saída de estoque (venda/reposição)'
+      observacao ? String(observacao).trim() : 'Saída de estoque'
     );
 
-  // Calcula saldo total disponível restante do produto para verificar RN-II (Estoque Baixo)
+  // Calcula saldo disponível restante do produto para emitir aviso de estoque baixo (RN-II)
   const lotesRestantes = db
     .prepare('SELECT * FROM Lote WHERE produtoId = ? AND quantidadeAtual > 0')
     .all(idProd);
@@ -247,23 +207,21 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
 
   const avisosGerados = [];
 
-  // Passo 6 do Caso de Uso RS001: Aviso de Estoque Baixo (RN-II / CT05)
   if (saldoTotalDisponivel <= Number(produto.estoqueMinimo)) {
     avisosGerados.push({
       tipo: 'EstoqueBaixo',
       regra: 'RN-II',
-      mensagem: `Aviso de Estoque Baixo: "${produto.nome}" ficou com saldo disponível de ${saldoTotalDisponivel} ${produto.unidadeMedida} (Mínimo configurado: ${produto.estoqueMinimo} ${produto.unidadeMedida}).`,
+      mensagem: `Estoque baixo: "${produto.nome}" ficou com ${saldoTotalDisponivel} ${produto.unidadeMedida} (mínimo: ${produto.estoqueMinimo} ${produto.unidadeMedida}).`,
     });
   }
 
-  // Alternativa 2 do Caso de Uso RS001: Aviso de Vencimento Próximo (RN-III / CT03)
   if (Number(produto.perecivel) === 1 && loteSelecionado.dataValidade) {
     const diasRestantes = calcularDiasParaVencimento(loteSelecionado.dataValidade);
     if (diasRestantes >= 0 && diasRestantes <= 7) {
       avisosGerados.push({
         tipo: 'VencimentoProximo',
         regra: 'RN-III',
-        mensagem: `Aviso de Vencimento Próximo: O lote [${loteSelecionado.codigoLote}] de "${produto.nome}" vence em ${diasRestantes} dia(s) (${loteSelecionado.dataValidade}).`,
+        mensagem: `Vencimento próximo: o lote [${loteSelecionado.codigoLote}] vence em ${diasRestantes} dia(s) (${loteSelecionado.dataValidade}).`,
       });
     }
   }
@@ -289,10 +247,6 @@ function processarSaidaUnitaria({ produtoId, loteId, quantidade, observacao, usu
   };
 }
 
-/**
- * Rota principal do Caso de Uso RS001: Registro de saída de produto do estoque (RF05).
- * Rota: POST /api/estoque/saida
- */
 function registrarSaida(req, res) {
   const { produtoId, loteId, quantidade, observacao } = req.body || {};
 
@@ -305,17 +259,16 @@ function registrarSaida(req, res) {
       observacao,
       usuarioId: req.usuario.id,
     });
-    db.exec('COMMIT;');
     sincronizarEstadosEAlertas();
+    db.exec('COMMIT;');
 
     return res.status(200).json({
-      mensagem: `Saída de ${resultado.lote.quantidadeRetirada} ${resultado.produto.unidadeMedida} de "${resultado.produto.nome}" (Lote ${resultado.lote.codigoLote}) registrada com sucesso por ${req.usuario.nome}.`,
+      mensagem: `Saída de ${resultado.lote.quantidadeRetirada} ${resultado.produto.unidadeMedida} de "${resultado.produto.nome}" (Lote ${resultado.lote.codigoLote}) registrada.`,
       ...resultado,
     });
   } catch (err) {
-    db.exec('ROLLBACK;');
-    const status = err.status || 500;
-    return res.status(status).json({
+    if (db.isTransaction) db.exec('ROLLBACK;');
+    return res.status(err.status || 500).json({
       erro: err.message,
       codigoRegra: err.codigoRegra || null,
       saldoAtual: err.saldoAtual !== undefined ? err.saldoAtual : undefined,
@@ -323,17 +276,12 @@ function registrarSaida(req, res) {
   }
 }
 
-/**
- * Registra a baixa de perda de um lote vencido ou avariado (Exclusivo Administrador - RE-I, T16, CT04).
- * Atualiza o estado do lote para 'Removido' conforme o Diagrama de Estados (Seção 6.4) e grava Movimentacao de 'Perda'.
- * Rota: POST /api/estoque/perda
- */
 function registrarBaixaPerda(req, res) {
   const { loteId, motivo } = req.body || {};
   const idLote = Number(loteId);
 
   if (!idLote) {
-    return res.status(400).json({ erro: 'Informe o loteId para realizar a baixa de perda.' });
+    return res.status(400).json({ erro: 'Informe o lote para realizar a baixa de perda.' });
   }
 
   const lote = db
@@ -352,7 +300,7 @@ function registrarBaixaPerda(req, res) {
   const qtdPerdida = Number(lote.quantidadeAtual);
   if (qtdPerdida <= 0) {
     return res.status(400).json({
-      erro: 'Este lote já possui quantidade zero e não pode sofrer nova baixa de perda.',
+      erro: 'Este lote já está com saldo zerado.',
     });
   }
 
@@ -368,42 +316,36 @@ function registrarBaixaPerda(req, res) {
       idLote,
       qtdPerdida,
       req.usuario.id,
-      motivo ? String(motivo).trim() : `Baixa de perda por vencimento (Validade: ${lote.dataValidade})`
+      motivo ? String(motivo).trim() : `Baixa por vencimento (validade: ${lote.dataValidade})`
     );
 
+    sincronizarEstadosEAlertas();
     db.exec('COMMIT;');
   } catch (err) {
-    db.exec('ROLLBACK;');
+    if (db.isTransaction) db.exec('ROLLBACK;');
     return res.status(500).json({ erro: 'Erro ao registrar baixa de perda.', detalhe: err.message });
   }
 
-  sincronizarEstadosEAlertas();
-
   return res.status(200).json({
-    mensagem: `Baixa de perda do lote [${lote.codigoLote}] (${qtdPerdida} ${lote.unidadeMedida} de "${lote.produtoNome}") registrada pelo Administrador.`,
+    mensagem: `Baixa de perda do lote [${lote.codigoLote}] (${qtdPerdida} ${lote.unidadeMedida} de "${lote.produtoNome}") concluída.`,
     loteId: idLote,
     quantidadePerdida: qtdPerdida,
     novoEstado: 'Removido',
   });
 }
 
-/**
- * Permite lançar entradas ou saídas de múltiplos produtos/lotes em uma única operação transacional (RF06, T17, RNF03).
- * Rota: POST /api/estoque/massa
- */
 function operacaoEmMassa(req, res) {
   const { operacao, itens, observacaoGeral } = req.body || {};
 
   if (!['Entrada', 'Saida'].includes(operacao) || !Array.isArray(itens) || itens.length === 0) {
     return res.status(400).json({
-      erro: 'Informe o tipo de operacao ("Entrada" ou "Saida") e uma lista não vazia de itens.',
+      erro: 'Selecione o tipo de operação e adicione pelo menos um item.',
     });
   }
 
-  // Somente Administrador pode lançar Entrada em massa; Funcionário e Administrador podem lançar Saída em massa
   if (operacao === 'Entrada' && req.usuario.perfil !== 'Administrador') {
     return res.status(403).json({
-      erro: 'Acesso negado (HTTP 403): Apenas o Administrador pode registrar entrada em massa de lotes.',
+      erro: 'Acesso negado (HTTP 403): apenas o Administrador pode lançar entrada em massa.',
     });
   }
 
@@ -419,34 +361,29 @@ function operacaoEmMassa(req, res) {
           produtoId: item.produtoId,
           loteId: item.loteId,
           quantidade: item.quantidade,
-          observacao: item.observacao || observacaoGeral || 'Saída em massa (RF06)',
+          observacao: item.observacao || observacaoGeral || 'Saída em massa',
           usuarioId: req.usuario.id,
         });
         resultados.push(resSaida);
       } else {
-        // Entrada em massa
         const idProd = Number(item.produtoId);
         const qtd = Number(item.quantidade);
         const codLote = item.codigoLote ? String(item.codigoLote).trim() : '';
 
         if (!idProd || !codLote || Number.isNaN(qtd) || qtd <= 0) {
-          const err = new Error(
-            `Item #${i + 1} inválido: informe produtoId, codigoLote e quantidade > 0.`
-          );
+          const err = new Error(`Linha #${i + 1}: preencha produto, código do lote e quantidade.`);
           err.status = 400;
           throw err;
         }
 
         const prod = db.prepare('SELECT * FROM Produto WHERE id = ?').get(idProd);
         if (!prod) {
-          const err = new Error(`Item #${i + 1}: Produto ID ${idProd} não encontrado.`);
+          const err = new Error(`Linha #${i + 1}: produto não encontrado.`);
           err.status = 404;
           throw err;
         }
         if (Number(prod.perecivel) === 1 && !item.dataValidade) {
-          const err = new Error(
-            `Item #${i + 1} ("${prod.nome}"): Produto perecível exige data de validade.`
-          );
+          const err = new Error(`Linha #${i + 1} ("${prod.nome}"): informe a data de validade.`);
           err.status = 400;
           throw err;
         }
@@ -467,7 +404,7 @@ function operacaoEmMassa(req, res) {
           loteId,
           qtd,
           req.usuario.id,
-          item.observacao || observacaoGeral || 'Entrada em massa (RF06)'
+          item.observacao || observacaoGeral || 'Entrada em massa'
         );
 
         resultados.push({
@@ -477,30 +414,24 @@ function operacaoEmMassa(req, res) {
       }
     }
 
+    sincronizarEstadosEAlertas();
     db.exec('COMMIT;');
   } catch (err) {
-    db.exec('ROLLBACK;');
+    if (db.isTransaction) db.exec('ROLLBACK;');
     return res.status(err.status || 400).json({
       erro: err.message,
       codigoRegra: err.codigoRegra || null,
     });
   }
 
-  sincronizarEstadosEAlertas();
-
   return res.status(200).json({
-    mensagem: `Operação em massa de ${operacao} concluída com sucesso (${resultados.length} itens processados).`,
+    mensagem: `Lançamento em massa de ${operacao.toLowerCase()} concluído (${resultados.length} itens).`,
     totalProcessado: resultados.length,
     resultados,
   });
 }
 
-/**
- * Lista todos os lotes cadastrados ordenados por validade FEFO (RN-III, T10, T14).
- * Rota: GET /api/lotes
- */
 function listarLotes(req, res) {
-  sincronizarEstadosEAlertas();
   const { produtoId } = req.query || {};
 
   let sql = `
@@ -516,7 +447,6 @@ function listarLotes(req, res) {
     params.push(Number(produtoId));
   }
 
-  // Ordenação FEFO (First Expired, First Out - RN-III): lotes com validade mais próxima aparecem primeiro
   sql += `
     ORDER BY
       CASE WHEN l.quantidadeAtual > 0 THEN 0 ELSE 1 END ASC,
@@ -537,13 +467,7 @@ function listarLotes(req, res) {
   return res.status(200).json(lotes);
 }
 
-/**
- * Retorna os alertas ativos separados em "estoqueBaixo" e "validadeProximaOuVencida" (RF07, RNF04).
- * Rota: GET /api/alertas
- */
 function listarAlertas(req, res) {
-  sincronizarEstadosEAlertas();
-
   const estoqueBaixo = db
     .prepare(`
       SELECT a.*, p.nome AS produtoNome, p.categoria, p.unidadeMedida, p.estoqueMinimo
@@ -573,10 +497,6 @@ function listarAlertas(req, res) {
   });
 }
 
-/**
- * Lista o histórico de movimentações com o nome e perfil do funcionário que a realizou (RN-IV, T11).
- * Rota: GET /api/movimentacoes
- */
 function listarMovimentacoes(req, res) {
   const { tipo, usuarioId, limite } = req.query || {};
   let sql = `
@@ -601,13 +521,8 @@ function listarMovimentacoes(req, res) {
     params.push(Number(usuarioId));
   }
 
-  sql += ' ORDER BY m.id DESC';
-  if (limite) {
-    sql += ' LIMIT ?';
-    params.push(Number(limite));
-  } else {
-    sql += ' LIMIT 200';
-  }
+  sql += ' ORDER BY m.id DESC LIMIT ?';
+  params.push(limite ? Number(limite) : 200);
 
   const movs = db.prepare(sql).all(...params);
   return res.status(200).json(movs);
